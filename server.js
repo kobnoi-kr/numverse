@@ -32,6 +32,7 @@ const {
 const snakeBridge = require("./src/games/snake-ladders/room-bridge");
 const imposterBridge = require("./src/games/imposter/room-bridge");
 const memoryBridge = require("./src/games/memory/room-bridge");
+const werewolfBridge = require("./src/games/werewolf/room-bridge");
 
 const PORT = Number(process.env.PORT) || 8787;
 /** Bind host: 0.0.0.0 = ทุก interface (LAN/สาธารณะ), 127.0.0.1 = เฉพาะเครื่องนี้ */
@@ -55,10 +56,16 @@ const MAX_ROOMS = 200;
 function roomMaxPlayers(room) {
   if (room && room.cat === "imposter") return imposterBridge.MAX_PLAYERS;
   if (room && room.cat === "cardmemory") return memoryBridge.MAX_PLAYERS;
+  if (room && room.cat === "werewolf") return werewolfBridge.MAX_PLAYERS;
   return snakeBridge.roomCap(room, MAX_PLAYERS);
 }
 function normalizeGameCat(cat) {
-  return memoryBridge.normalizeCat(cat) || imposterBridge.normalizeCat(cat) || snakeBridge.normalizeCat(cat);
+  return (
+    werewolfBridge.normalizeCat(cat) ||
+    memoryBridge.normalizeCat(cat) ||
+    imposterBridge.normalizeCat(cat) ||
+    snakeBridge.normalizeCat(cat)
+  );
 }
 const SEAT_MS = 45000;
 const ROOM_MS = 60000;
@@ -542,7 +549,14 @@ function blankRoom(code, visibility, host) {
     memoryCombo: true,
     memoryOnMatch: "continue",
     memoryOnWrong: "next",
-    memoryTimer: null
+    memoryTimer: null,
+    werewolf: null,
+    wwNightSec: 30,
+    wwDiscussionSec: 60,
+    wwVoteSec: 45,
+    wwTieRule: "none",
+    wwAllowSelfProtect: true,
+    werewolfTimer: null
   };
 }
 function applyRoomSetup(room, setup) {
@@ -554,6 +568,8 @@ function applyRoomSetup(room, setup) {
     } else if (nextCat === "imposter" && room.players.length > imposterBridge.MAX_PLAYERS) {
       /* keep previous cat */
     } else if (nextCat === "cardmemory" && room.players.length > memoryBridge.MAX_PLAYERS) {
+      /* keep previous cat */
+    } else if (nextCat === "werewolf" && room.players.length > werewolfBridge.MAX_PLAYERS) {
       /* keep previous cat */
     } else {
       room.cat = nextCat;
@@ -593,6 +609,13 @@ function applyRoomSetup(room, setup) {
   if (setup.memoryCombo != null) room.memoryCombo = !!setup.memoryCombo;
   if (setup.memoryOnMatch != null) room.memoryOnMatch = memoryBridge.normalizeOnMatch(setup.memoryOnMatch);
   if (setup.memoryOnWrong != null) room.memoryOnWrong = memoryBridge.normalizeOnWrong(setup.memoryOnWrong);
+  if (setup.wwNightSec != null) room.wwNightSec = werewolfBridge.normalizeNightSec(setup.wwNightSec);
+  if (setup.wwDiscussionSec != null) {
+    room.wwDiscussionSec = werewolfBridge.normalizeDiscussionSec(setup.wwDiscussionSec);
+  }
+  if (setup.wwVoteSec != null) room.wwVoteSec = werewolfBridge.normalizeVoteSec(setup.wwVoteSec);
+  if (setup.wwTieRule != null) room.wwTieRule = werewolfBridge.normalizeTie(setup.wwTieRule);
+  if (setup.wwAllowSelfProtect != null) room.wwAllowSelfProtect = !!setup.wwAllowSelfProtect;
   if (setup.rangeMode === "99" || setup.rangeMode === "999" || setup.rangeMode === "9999") {
     room.rangeMode = setup.rangeMode;
     room.min = 1;
@@ -677,6 +700,13 @@ function snap(room, player, opts) {
     memoryOnMatch: memoryBridge.normalizeOnMatch(room.memoryOnMatch),
     memoryOnWrong: memoryBridge.normalizeOnWrong(room.memoryOnWrong),
     memory: memoryBridge.snapMemory(room, spectator ? null : player),
+    wwNightSec: werewolfBridge.normalizeNightSec(room.wwNightSec),
+    wwDiscussionSec: werewolfBridge.normalizeDiscussionSec(room.wwDiscussionSec),
+    wwVoteSec: werewolfBridge.normalizeVoteSec(room.wwVoteSec),
+    wwTieRule: werewolfBridge.normalizeTie(room.wwTieRule),
+    wwAllowSelfProtect: room.wwAllowSelfProtect !== false,
+    werewolf: werewolfBridge.snapWerewolf(room, spectator ? null : player),
+    youWerewolf: spectator ? null : werewolfBridge.privateWerewolf(room, player),
     players: room.players.map((item) => ({
       id: item.id,
       name: item.name,
@@ -1494,6 +1524,9 @@ async function onSetup(ws, msg) {
     if (nextCat === "cardmemory" && room.players.length > memoryBridge.MAX_PLAYERS) {
       return fail(ws, "Memory Card รองรับได้สูงสุด " + memoryBridge.MAX_PLAYERS + " คน");
     }
+    if (nextCat === "werewolf" && room.players.length > werewolfBridge.MAX_PLAYERS) {
+      return fail(ws, "Werewolf รองรับได้สูงสุด " + werewolfBridge.MAX_PLAYERS + " คน");
+    }
     if (!(await assertComingSoonPlayable(ws, ctx.player, nextCat))) return;
     room.cat = nextCat;
   }
@@ -1528,6 +1561,13 @@ async function onSetup(ws, msg) {
   if (patch.memoryCombo != null) room.memoryCombo = !!patch.memoryCombo;
   if (patch.memoryOnMatch != null) room.memoryOnMatch = memoryBridge.normalizeOnMatch(patch.memoryOnMatch);
   if (patch.memoryOnWrong != null) room.memoryOnWrong = memoryBridge.normalizeOnWrong(patch.memoryOnWrong);
+  if (patch.wwNightSec != null) room.wwNightSec = werewolfBridge.normalizeNightSec(patch.wwNightSec);
+  if (patch.wwDiscussionSec != null) {
+    room.wwDiscussionSec = werewolfBridge.normalizeDiscussionSec(patch.wwDiscussionSec);
+  }
+  if (patch.wwVoteSec != null) room.wwVoteSec = werewolfBridge.normalizeVoteSec(patch.wwVoteSec);
+  if (patch.wwTieRule != null) room.wwTieRule = werewolfBridge.normalizeTie(patch.wwTieRule);
+  if (patch.wwAllowSelfProtect != null) room.wwAllowSelfProtect = !!patch.wwAllowSelfProtect;
   if (patch.rangeMode === "99" || patch.rangeMode === "999" || patch.rangeMode === "9999" || patch.rangeMode === "custom") {
     room.rangeMode = patch.rangeMode;
     if (patch.rangeMode === "99") { room.min = 1; room.max = 99; }
@@ -1708,6 +1748,131 @@ function afterImposterAction(room) {
   broadcast(room);
 }
 
+function clearWerewolfTimer(room) {
+  if (room && room.werewolfTimer) {
+    clearTimeout(room.werewolfTimer);
+    room.werewolfTimer = null;
+  }
+}
+function applyWerewolfOver(room, over) {
+  clearTurnTimer(room);
+  clearWerewolfTimer(room);
+  room.phase = "over";
+  room.activeSpin = null;
+  const winners = Array.isArray(over.winners) ? over.winners : [];
+  for (const name of winners) addPoint(room, name);
+  if (winners.length) setChampions(room, winners);
+  room.over = Object.assign(
+    {
+      outOrder: [],
+      many: false,
+      hist: null,
+      again: "เล่นอีกครั้ง",
+      reset: true,
+      winTarget: 1,
+      at: Date.now()
+    },
+    over
+  );
+}
+function armWerewolfTimer(room) {
+  clearWerewolfTimer(room);
+  if (!room || room.phase !== "werewolf" || !room.werewolf) return;
+  const ends = room.werewolf.phaseEndsAt;
+  if (!ends) return;
+  const delay = Math.max(50, ends - Date.now() + 20);
+  room.werewolfTimer = setTimeout(() => onWerewolfTick(room), delay);
+}
+function onWerewolfTick(room) {
+  if (!room || room.phase !== "werewolf" || !room.werewolf) return;
+  werewolfBridge.tickWerewolf(room);
+  if (werewolfBridge.finishIfDone(room, applyWerewolfOver)) {
+    clearWerewolfTimer(room);
+    broadcast(room);
+    return;
+  }
+  armWerewolfTimer(room);
+  broadcast(room);
+}
+function afterWerewolfAction(room) {
+  if (werewolfBridge.finishIfDone(room, applyWerewolfOver)) {
+    clearWerewolfTimer(room);
+    broadcast(room);
+    return;
+  }
+  armWerewolfTimer(room);
+  broadcast(room);
+}
+function onWerewolfConfirm(ws) {
+  const ctx = seat(ws);
+  if (!ctx || ctx.room.phase !== "werewolf" || !ctx.room.werewolf) return;
+  const res = werewolfBridge.confirmReveal(ctx.room.werewolf, ctx.player.id);
+  if (!res.ok) return fail(ws, "ยืนยันบทบาทไม่ได้");
+  werewolfBridge.autoPlayBots(ctx.room);
+  afterWerewolfAction(ctx.room);
+}
+function onWerewolfNight(ws, msg) {
+  const ctx = seat(ws);
+  if (!ctx || ctx.room.phase !== "werewolf" || !ctx.room.werewolf) return;
+  const res = werewolfBridge.submitNightAction(ctx.room.werewolf, ctx.player.id, {
+    type: msg && msg.type,
+    targetId: msg && msg.targetId
+  });
+  if (!res.ok) {
+    const map = {
+      wrong_phase: "ยังไม่ถึงช่วงกลางคืน",
+      not_alive: "ผู้เล่นที่ตายแล้วใช้ความสามารถไม่ได้",
+      already_acted: "ส่งแอ็กชันไปแล้ว",
+      bad_action: "แอ็กชันไม่ถูกต้อง",
+      bad_target: "เลือกเป้าหมายไม่ได้",
+      pack_mate: "หมาป่าโจมตีพวกเดียวกันไม่ได้",
+      no_self: "ปกป้องตัวเองไม่ได้",
+      same_protect: "ห้ามปกป้องคนเดิมติดกันสองคืน",
+      no_heal: "ยาชุบชีวิตหมดแล้ว",
+      no_poison: "ยาพิษหมดแล้ว",
+      no_night_action: "บทบาทนี้ไม่มีแอ็กชันกลางคืน"
+    };
+    return fail(ws, map[res.error] || "ส่งแอ็กชันไม่สำเร็จ");
+  }
+  if (werewolfBridge.nightActorsDone(ctx.room.werewolf)) {
+    werewolfBridge.resolveNight(ctx.room.werewolf);
+  }
+  werewolfBridge.autoPlayBots(ctx.room);
+  afterWerewolfAction(ctx.room);
+}
+function onWerewolfVote(ws, msg) {
+  const ctx = seat(ws);
+  if (!ctx || ctx.room.phase !== "werewolf" || !ctx.room.werewolf) return;
+  const res = werewolfBridge.submitVote(ctx.room.werewolf, ctx.player.id, msg && msg.targetId);
+  if (!res.ok) {
+    const map = {
+      wrong_phase: "ยังไม่ถึงช่วงโหวต",
+      not_alive: "ผู้เล่นที่ตายแล้วโหวตไม่ได้",
+      already_voted: "โหวตไปแล้ว",
+      self_vote: "โหวตตัวเองไม่ได้",
+      bad_target: "เลือกเป้าหมายไม่ได้"
+    };
+    return fail(ws, map[res.error] || "โหวตไม่สำเร็จ");
+  }
+  werewolfBridge.autoPlayBots(ctx.room);
+  afterWerewolfAction(ctx.room);
+}
+function onWerewolfHunter(ws, msg) {
+  const ctx = seat(ws);
+  if (!ctx || ctx.room.phase !== "werewolf" || !ctx.room.werewolf) return;
+  const res = werewolfBridge.hunterShot(ctx.room.werewolf, ctx.player.id, msg && msg.targetId);
+  if (!res.ok) {
+    const map = {
+      wrong_phase: "ยังไม่ถึงช่วงนักล่ายิง",
+      not_hunter: "คุณไม่ใช่นักล่าที่ต้องยิง",
+      bad_target: "เลือกเป้าหมายไม่ได้"
+    };
+    return fail(ws, map[res.error] || "ยิงไม่สำเร็จ");
+  }
+  werewolfBridge.autoPlayBots(ctx.room);
+  afterWerewolfAction(ctx.room);
+}
+
 function onStart(ws) {
   const ctx = seat(ws);
   if (!hostOnly(ctx)) return fail(ws, "เฉพาะโฮสต์ที่เริ่มเกมได้");
@@ -1767,6 +1932,26 @@ function onStart(ws) {
       return fail(ws, err && err.code === "invalid_player_count" ? "จำนวนผู้เล่นไม่ถูกต้อง" : "เริ่ม Memory Card ไม่สำเร็จ");
     }
     armMemoryTimer(room);
+    broadcast(room);
+    return;
+  }
+  if (room.cat === "werewolf") {
+    if (room.players.length > werewolfBridge.MAX_PLAYERS) {
+      return fail(ws, "Werewolf รองรับได้สูงสุด " + werewolfBridge.MAX_PLAYERS + " คน");
+    }
+    if (room.players.length < werewolfBridge.MIN_PLAYERS) {
+      return fail(ws, "ต้องมีผู้เล่นอย่างน้อย " + werewolfBridge.MIN_PLAYERS + " คน");
+    }
+    try {
+      clearChampions(room);
+      werewolfBridge.startWerewolf(room);
+    } catch (err) {
+      return fail(
+        ws,
+        err && err.code === "invalid_player_count" ? "จำนวนผู้เล่นไม่ถูกต้อง" : "เริ่ม Werewolf ไม่สำเร็จ"
+      );
+    }
+    armWerewolfTimer(room);
     broadcast(room);
     return;
   }
@@ -1955,6 +2140,17 @@ function onAgain(ws) {
       memoryBridge.clearMemory(room);
       return fail(ws, "เริ่ม Memory Card รอบใหม่ไม่สำเร็จ");
     }
+  } else if (room.over.mode === "werewolf" || room.cat === "werewolf") {
+    try {
+      clearChampions(room);
+      werewolfBridge.startWerewolf(room);
+      armWerewolfTimer(room);
+    } catch (err) {
+      room.phase = "lobby";
+      room.over = null;
+      werewolfBridge.clearWerewolf(room);
+      return fail(ws, "เริ่ม Werewolf รอบใหม่ไม่สำเร็จ");
+    }
   } else begin(room);
   broadcast(room);
 }
@@ -1985,6 +2181,8 @@ function onAbort(ws) {
   imposterBridge.clearImposter(room);
   clearMemoryTimer(room);
   memoryBridge.clearMemory(room);
+  clearWerewolfTimer(room);
+  werewolfBridge.clearWerewolf(room);
   clearAngelGuards(room);
   room.players.forEach((player) => {
     if (!isBot(player)) player.auto = false;
@@ -2002,7 +2200,8 @@ function onClear(ws) {
     room.phase === "wheel" ||
     room.phase === "snake" ||
     room.phase === "imposter" ||
-    room.phase === "cardmemory"
+    room.phase === "cardmemory" ||
+    room.phase === "werewolf"
   ) {
     return;
   }
@@ -2511,6 +2710,10 @@ function onMessage(ws, raw) {
   if (msg.t === "imposter:vote") return onImposterVote(ws, msg);
   if (msg.t === "imposter:guess") return onImposterGuess(ws, msg);
   if (msg.t === "memory:flip") return onMemoryFlip(ws, msg);
+  if (msg.t === "ww:confirm") return onWerewolfConfirm(ws);
+  if (msg.t === "ww:night") return onWerewolfNight(ws, msg);
+  if (msg.t === "ww:vote") return onWerewolfVote(ws, msg);
+  if (msg.t === "ww:hunter") return onWerewolfHunter(ws, msg);
   if (msg.t === "pick") return onPick(ws, msg);
   if (msg.t === "pickNum") return onPickNum(ws, msg);
   if (msg.t === "undo") return onUndo(ws);
@@ -2552,6 +2755,7 @@ async function onUseHelper(ws, msg) {
     if (ctx.room.phase !== "lobby") return fail(ws, "การ์ดนางฟ้าใช้ได้เฉพาะก่อนเริ่มเกม");
     if (ctx.room.cat === "imposter") return fail(ws, "การ์ดนางฟ้าใช้ไม่ได้ใน Imposter");
     if (ctx.room.cat === "cardmemory") return fail(ws, "การ์ดนางฟ้าใช้ไม่ได้ใน Memory Card");
+    if (ctx.room.cat === "werewolf") return fail(ws, "การ์ดนางฟ้าใช้ไม่ได้ใน Werewolf");
     if (ctx.player.angelCardUsed || ctx.player.angelGuard || (ctx.player.angelSnakeCharges | 0) > 0) {
       return fail(ws, "ใช้การ์ดนางฟ้าไปแล้วในเกมนี้");
     }
@@ -2796,6 +3000,9 @@ function onRoomChat(ws, msg) {
     .slice(0, 64)
     .join("");
   if (!text) return;
+  if (ctx.room.phase === "werewolf" && !werewolfBridge.chatAllowed(ctx.room, ctx.player)) {
+    return fail(ws, "ผู้เล่นที่ตายแล้วแชทกับคนที่มีชีวิตไม่ได้");
+  }
   const limited = (() => {
     try {
       const { rateLimit } = require("./src/auth/rate-limit");

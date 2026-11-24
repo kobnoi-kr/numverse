@@ -11,6 +11,7 @@ let snakeLive=null;
 let snakeSnapSeq=0;
 let imposterLive=null;
 let memoryLive=null;
+let werewolfLive=null;
 function ensureMemoryUi(){
   if(memoryLive) return memoryLive;
   const root=$("memoryRoot");
@@ -51,6 +52,30 @@ function updateImposterUi(s){
     if(spectating) note.textContent="โหมด Spectator — ดูได้อย่างเดียว ไม่เห็นบทบาท/คำศัพท์ของใคร";
   }
   ui.paint(s&&s.imposter, s&&s.youImposter, {
+    players: (s&&s.players)||[],
+    youId: (s&&s.youId)||myId||""
+  });
+}
+function ensureWerewolfUi(){
+  if(werewolfLive) return werewolfLive;
+  const root=$("werewolfRoot");
+  if(!root||!window.NVWerewolf||typeof window.NVWerewolf.createLiveUi!=="function") return null;
+  werewolfLive=window.NVWerewolf.createLiveUi({
+    root,
+    send:(payload)=>{ if(onlineMode&&!spectating) send(payload); },
+    onCountdown:()=>playClip(COOLDOWN_SOUND)
+  });
+  return werewolfLive;
+}
+function updateWerewolfUi(s){
+  const ui=ensureWerewolfUi();
+  if(!ui) return;
+  const note=$("werewolfSpectateNote");
+  if(note){
+    note.classList.toggle("hidden",!spectating);
+    if(spectating) note.textContent="โหมด Spectator — ดูได้อย่างเดียว ไม่เห็นบทบาทลับของใคร";
+  }
+  ui.paint(s&&s.werewolf, s&&s.youWerewolf, {
     players: (s&&s.players)||[],
     youId: (s&&s.youId)||myId||""
   });
@@ -491,21 +516,23 @@ function applySpectatorUi(){
   document.body.classList.add("spectating");
   const note=$("roomNote");
   if(note){ note.classList.remove("hidden"); note.textContent="โหมด Spectator — ดูได้อย่างเดียว"; }
-  ["spin","clearScores","addBot","again","pickGo","doSpin","wheelRepick","autoPlay","autoPick","autoSnake","renameRoomBtn","snakeLeave","imposterLeave","memoryLeave"].forEach(id=>{
+  ["spin","clearScores","addBot","again","pickGo","doSpin","wheelRepick","autoPlay","autoPick","autoSnake","renameRoomBtn","snakeLeave","imposterLeave","memoryLeave","werewolfLeave"].forEach(id=>{
     const el=$(id); if(el){ el.disabled=true; el.classList.add("hidden"); }
   });
 }
 function show(n){
-  ["gate","start","play","pick","wheelGame","snakeGame","imposterGame","memoryGame","over"].forEach(s=>{ const el=$(s); if(el) el.classList.toggle("hidden",s!==n); });
+  ["gate","start","play","pick","wheelGame","snakeGame","imposterGame","memoryGame","werewolfGame","over"].forEach(s=>{ const el=$(s); if(el) el.classList.toggle("hidden",s!==n); });
   const inRoom=n!=="gate";
   const lobby=n==="start";
   const snakePlay=n==="snakeGame";
   const imposterPlay=n==="imposterGame";
   const memoryPlay=n==="memoryGame";
+  const werewolfPlay=n==="werewolfGame";
   const inGame=inRoom&&!lobby;
   document.body.classList.toggle("snake-play", snakePlay);
   document.body.classList.toggle("imposter-play", imposterPlay);
   document.body.classList.toggle("memory-play", memoryPlay);
+  document.body.classList.toggle("werewolf-play", werewolfPlay);
   document.body.classList.toggle("in-game", inGame);
   if(!snakePlay){
     try{ delete document.body.dataset.snakeMap; }catch(e){}
@@ -806,6 +833,9 @@ function paintOverScreen(s){
   let note=s.over.note||"";
   if(s.over.mode==="imposter"&&Array.isArray(s.over.imposters)&&s.over.imposters.length){
     note=(note?note+" · ":"")+"Imposter: "+s.over.imposters.join(", ");
+  }
+  if(s.over.mode==="werewolf"&&Array.isArray(s.over.werewolves)&&s.over.werewolves.length){
+    note=(note?note+" · ":"")+"หมาป่า: "+s.over.werewolves.join(", ");
   }
   $("overNote").textContent=note;
   setOverOutOrder(s.over.outOrder||[]);
@@ -1731,7 +1761,7 @@ function paintLobbyAngel(){
 function helperCanUseInBag(item){
   if(!item||!(Number(item.quantity)>0)||spinning||spectating) return false;
   if(item.id==="item.angel"){
-    return netPhase==="lobby"&&gameCat!=="imposter"&&gameCat!=="cardmemory"&&!angelArmed();
+    return netPhase==="lobby"&&gameCat!=="imposter"&&gameCat!=="cardmemory"&&gameCat!=="werewolf"&&!angelArmed();
   }
   if(item.id==="item.evenodd"){
     const me=playerMeta.find(p=>p&&p.id===myId);
@@ -1831,7 +1861,7 @@ function paintLobbyBagModal(){
   const canUse=helperCanUseInBag(sel);
   const statusNote=armedAngel||armedEven||armedSkip
     ?" · ใช้แล้วในเกมนี้"
-    :sel.id==="item.angel"&&(gameCat==="imposter"||gameCat==="cardmemory")
+    :sel.id==="item.angel"&&(gameCat==="imposter"||gameCat==="cardmemory"||gameCat==="werewolf")
       ?" · ใช้ไม่ได้ในเกมนี้"
     :sel.id==="item.skip"&&(netPhase==="play"||netPhase==="snake"||netPhase==="wheel")
       ?" · ใช้ระหว่างเกม"
@@ -2474,12 +2504,12 @@ function paintGameModeBadge(cat){
   const ico=$("gameModeIco");
   const name=$("gameModeName");
   const hint=$("gameModeHint");
-  if(ico) ico.textContent=cat==="wheel"?"🎡":cat==="snake"?"🐍":cat==="imposter"?"🕵️":cat==="cardmemory"?"🃏":"🔢";
-  if(name) name.textContent=cat==="wheel"?"วงล้อ":cat==="snake"?"บันไดงู":cat==="imposter"?"Imposter":cat==="cardmemory"?"Memory Card":"หาเลข";
-  if(hint) hint.textContent=cat==="wheel"?"วงล้อสุ่มเลข":cat==="snake"?"ทอยลูกเต๋าถึง 100":cat==="imposter"?"หา Imposter ด้วยคำใบ้":cat==="cardmemory"?"จับคู่การ์ด":"ห้ามโดนเลขลับ";
+  if(ico) ico.textContent=cat==="wheel"?"🎡":cat==="snake"?"🐍":cat==="imposter"?"🕵️":cat==="cardmemory"?"🃏":cat==="werewolf"?"🐺":"🔢";
+  if(name) name.textContent=cat==="wheel"?"วงล้อ":cat==="snake"?"บันไดงู":cat==="imposter"?"Imposter":cat==="cardmemory"?"Memory Card":cat==="werewolf"?"Werewolf":"หาเลข";
+  if(hint) hint.textContent=cat==="wheel"?"วงล้อสุ่มเลข":cat==="snake"?"ทอยลูกเต๋าถึง 100":cat==="imposter"?"หา Imposter ด้วยคำใบ้":cat==="cardmemory"?"จับคู่การ์ด":cat==="werewolf"?"หาหมาป่าในหมู่บ้าน":"ห้ามโดนเลขลับ";
 }
 function normalizeCat(next){
-  if(next==="wheel"||next==="snake"||next==="secret"||next==="imposter"||next==="cardmemory") return next;
+  if(next==="wheel"||next==="snake"||next==="secret"||next==="imposter"||next==="cardmemory"||next==="werewolf") return next;
   return "secret";
 }
 function applyCat(next){
@@ -2494,12 +2524,14 @@ function applyCat(next){
   const snake=cat==="snake";
   const imposter=cat==="imposter";
   const memory=cat==="cardmemory";
-  if($("secretOnly")) $("secretOnly").classList.toggle("hidden", wheel||snake||imposter||memory);
+  const werewolf=cat==="werewolf";
+  if($("secretOnly")) $("secretOnly").classList.toggle("hidden", wheel||snake||imposter||memory||werewolf);
   if($("wheelOnly")) $("wheelOnly").classList.toggle("hidden", !wheel);
   if($("snakeOnly")) $("snakeOnly").classList.toggle("hidden", !snake);
   if($("imposterOnly")) $("imposterOnly").classList.toggle("hidden", !imposter);
   if($("memoryOnly")) $("memoryOnly").classList.toggle("hidden", !memory);
-  if($("numberSetup")) $("numberSetup").classList.toggle("hidden", snake||imposter||memory);
+  if($("werewolfOnly")) $("werewolfOnly").classList.toggle("hidden", !werewolf);
+  if($("numberSetup")) $("numberSetup").classList.toggle("hidden", snake||imposter||memory||werewolf);
   const cats=$("cats");
   if(cats){
     for(const x of cats.querySelectorAll("[data-cat]")){
@@ -2518,7 +2550,9 @@ function applyCat(next){
           ?"ให้คำใบ้ คุยในแชท โหวตหา Imposter"
           :memory
             ?"เปิดการ์ดทีละ 2 ใบ จำตำแหน่ง แล้วจับคู่"
-            :"ทายเลข… แต่ห้ามโดนเลขนั้น!";
+            :werewolf
+              ?"กลางคืนใช้ความสามารถ · กลางวันคุยและโหวตหาหมาป่า"
+              :"ทายเลข… แต่ห้ามโดนเลขนั้น!";
   }
   if(changed){
     loadScores();
@@ -3451,6 +3485,14 @@ const GUIDE_GAMES={
 <li>คอมโบเพิ่มเมื่อจับคู่ติดกัน เปิดผิดแล้วคอมโบกลับเป็น 0</li>
 <li>จับคู่ครบคนคะแนนสูงสุดชนะ ถ้าคะแนนเท่ากันดูจำนวนคู่ แล้วดูว่าใครทำคะแนนได้ก่อน</li>
 <li>เซิร์ฟเวอร์เป็นคนสุ่มการ์ดและตัดสินผล การ์ดที่ยังคว่ำอยู่จะไม่ส่งภาพให้เครื่องผู้เล่น</li>
+</ul></section>`,
+  werewolf:`<section><h4>Werewolf</h4><ul>
+<li>ผู้เล่น 5–8 คน ได้บทบาทลับ: หมาป่า ชาวบ้าน ผู้หยั่งรู้ แม่มด ผู้พิทักษ์ นักล่า</li>
+<li>กลางคืนใช้ความสามารถตามบทบาท · กลางวันคุยและโหวตกำจัดผู้ต้องสงสัย</li>
+<li>หมาป่าเลือกเหยื่อ · ผู้พิทักษ์ปกป้อง · ผู้หยั่งรู้ตรวจตัวตน · แม่มดใช้ยาชุบ/พิษได้ชนิดละครั้ง</li>
+<li>ฝ่ายหมู่บ้านชนะเมื่อหมาป่าถูกกำจัดครบ · ฝ่ายหมาป่าชนะเมื่อจำนวนหมาป่าไม่น้อยกว่าฝ่ายตรงข้าม</li>
+<li>นักล่าเมื่อถูกกำจัดสามารถยิงผู้เล่นอีกคนได้ทันที</li>
+<li>ผู้เล่นที่ตายแล้วแชทกับคนที่มีชีวิตไม่ได้ · การ์ดนางฟ้าใช้ไม่ได้</li>
 </ul></section>`
 };
 const GUIDE_TITLES={
@@ -3458,10 +3500,11 @@ const GUIDE_TITLES={
   wheel:"คู่มือวงล้อ",
   snake:"คู่มือบันไดงู",
   imposter:"คู่มือ Imposter",
-  cardmemory:"คู่มือ Memory Card"
+  cardmemory:"คู่มือ Memory Card",
+  werewolf:"คู่มือ Werewolf"
 };
 function guideGameId(){
-  if(gameCat==="wheel"||gameCat==="snake"||gameCat==="imposter"||gameCat==="cardmemory"||gameCat==="secret") return gameCat;
+  if(gameCat==="wheel"||gameCat==="snake"||gameCat==="imposter"||gameCat==="cardmemory"||gameCat==="werewolf"||gameCat==="secret") return gameCat;
   return "secret";
 }
 function renderGuide(cat){
@@ -3480,7 +3523,7 @@ function renderGuide(cat){
   }
 }
 function openGuide(cat){
-  const inGame=netPhase==="play"||netPhase==="pick"||netPhase==="wheel"||netPhase==="snake"||netPhase==="imposter"||netPhase==="cardmemory"||netPhase==="over";
+  const inGame=netPhase==="play"||netPhase==="pick"||netPhase==="wheel"||netPhase==="snake"||netPhase==="imposter"||netPhase==="cardmemory"||netPhase==="werewolf"||netPhase==="over";
   renderGuide(cat||(inGame?"play":"room"));
   $("guideModal").classList.remove("hidden");
 }
@@ -3530,7 +3573,7 @@ function leaveCurrentRoom(){
   send({t:"leave"});
 }
 function openQuitGameModal(){
-  const inGame=netPhase==="play"||netPhase==="pick"||netPhase==="wheel"||netPhase==="snake"||netPhase==="imposter"||netPhase==="cardmemory"||netPhase==="over";
+  const inGame=netPhase==="play"||netPhase==="pick"||netPhase==="wheel"||netPhase==="snake"||netPhase==="imposter"||netPhase==="cardmemory"||netPhase==="werewolf"||netPhase==="over";
   if(!onlineMode||!inGame) return;
   const modal=$("quitGameModal");
   if(modal) modal.classList.remove("hidden");
@@ -3693,11 +3736,16 @@ function syncSetup(s){
   if($("memoryOnMatch")&&document.activeElement!==$("memoryOnMatch")) $("memoryOnMatch").value=s.memoryOnMatch==="next"?"next":"continue";
   if($("memoryOnWrong")&&document.activeElement!==$("memoryOnWrong")) $("memoryOnWrong").value=s.memoryOnWrong==="retry"?"retry":"next";
   if($("memoryCombo")&&document.activeElement!==$("memoryCombo")) $("memoryCombo").value=s.memoryCombo===false?"0":"1";
+  if($("wwNightSec")&&document.activeElement!==$("wwNightSec")) $("wwNightSec").value=String(s.wwNightSec||30);
+  if($("wwDiscussionSec")&&document.activeElement!==$("wwDiscussionSec")) $("wwDiscussionSec").value=String(s.wwDiscussionSec||60);
+  if($("wwVoteSec")&&document.activeElement!==$("wwVoteSec")) $("wwVoteSec").value=String(s.wwVoteSec||45);
+  if($("wwTieRule")&&document.activeElement!==$("wwTieRule")) $("wwTieRule").value=s.wwTieRule==="random"?"random":"none";
+  if($("wwAllowSelfProtect")&&document.activeElement!==$("wwAllowSelfProtect")) $("wwAllowSelfProtect").checked=s.wwAllowSelfProtect!==false;
 }
 function hostLocks(){
   if(!onlineMode){
     $("setup").classList.remove("locked");
-    ["winScore","turnSec","secretCount","pickEach","cmin","cmax","snakeMap","impostorCount","clueRounds","clueSec","discussionSec","voteSec","memoryBoard","memoryTurnSec","memoryRevealMs","memoryPoints","memoryOnMatch","memoryOnWrong","memoryCombo"].forEach(id=>{ const el=$(id); if(el) el.disabled=false; });
+    ["winScore","turnSec","secretCount","pickEach","cmin","cmax","snakeMap","impostorCount","clueRounds","clueSec","discussionSec","voteSec","memoryBoard","memoryTurnSec","memoryRevealMs","memoryPoints","memoryOnMatch","memoryOnWrong","memoryCombo","wwNightSec","wwDiscussionSec","wwVoteSec","wwTieRule","wwAllowSelfProtect"].forEach(id=>{ const el=$(id); if(el) el.disabled=false; });
     ["cats","modes","restModes","impostorInfoModes"].forEach(id=>{
       const wrap=$(id);
       if(!wrap) return;
@@ -3711,7 +3759,7 @@ function hostLocks(){
   const canSetup=host&&lobby;
   $("setup").classList.toggle("locked",!canSetup);
   $("setup").setAttribute("aria-disabled",canSetup?"false":"true");
-  ["winScore","turnSec","secretCount","pickEach","cmin","cmax","snakeMap","impostorCount","clueRounds","clueSec","discussionSec","voteSec","memoryBoard","memoryTurnSec","memoryRevealMs","memoryPoints","memoryOnMatch","memoryOnWrong","memoryCombo"].forEach(id=>{
+  ["winScore","turnSec","secretCount","pickEach","cmin","cmax","snakeMap","impostorCount","clueRounds","clueSec","discussionSec","voteSec","memoryBoard","memoryTurnSec","memoryRevealMs","memoryPoints","memoryOnMatch","memoryOnWrong","memoryCombo","wwNightSec","wwDiscussionSec","wwVoteSec","wwTieRule","wwAllowSelfProtect"].forEach(id=>{
     const el=$(id);
     if(el) el.disabled=!canSetup;
   });
@@ -3725,16 +3773,16 @@ function hostLocks(){
     setupSubmit.disabled=!canSetup;
     setupSubmit.textContent="บันทึกการตั้งค่า";
   }
-  ["leave","back","wheelLeave","pickLeave","snakeLeave","imposterLeave","memoryLeave"].forEach(id=>{
+  ["leave","back","wheelLeave","pickLeave","snakeLeave","imposterLeave","memoryLeave","werewolfLeave"].forEach(id=>{
     const el=$(id);
     if(!el) return;
     // Spectators use quit (unwatch); hide host abort buttons.
     const showLeave=spectating?false:host;
     el.classList.toggle("hidden",!showLeave);
-    el.textContent=id==="imposterLeave"&&netPhase==="imposter"?"ตัดจบเกม · กลับห้อง":"กลับห้อง";
+    el.textContent=(id==="imposterLeave"&&netPhase==="imposter")||(id==="werewolfLeave"&&netPhase==="werewolf")?"ตัดจบเกม · กลับห้อง":"กลับห้อง";
   });
   if($("quitGameBtn")){
-    const inGame=netPhase==="play"||netPhase==="pick"||netPhase==="wheel"||netPhase==="snake"||netPhase==="imposter"||netPhase==="cardmemory"||netPhase==="over";
+    const inGame=netPhase==="play"||netPhase==="pick"||netPhase==="wheel"||netPhase==="snake"||netPhase==="imposter"||netPhase==="cardmemory"||netPhase==="werewolf"||netPhase==="over";
     $("quitGameBtn").classList.toggle("hidden",!(onlineMode&&inGame));
   }
   const canRenameRoom=host&&lobby&&!spectating;
@@ -3808,6 +3856,7 @@ function applySnap(s){
   netPhase=s.phase||"lobby";
   if(netPhase!=="imposter"&&imposterLive&&typeof imposterLive.halt==="function") imposterLive.halt();
   if(netPhase!=="cardmemory"&&memoryLive&&typeof memoryLive.halt==="function") memoryLive.halt();
+  if(netPhase!=="werewolf"&&werewolfLive&&typeof werewolfLive.halt==="function") werewolfLive.halt();
   // Profile card is lobby-only — never stay open during play/pick/wheel/over.
   if(netPhase!=="lobby") closePlayerProfileModal();
   if(netPhase==="lobby"||netPhase==="gate") closeQuitGameModal();
@@ -3918,6 +3967,16 @@ function applySnap(s){
         :"จับคู่การ์ด · "+board+" · ผู้เล่น 2–"+(s.maxPlayers||8);
     }
     updateMemoryUi(s);
+    if(spectating) applySpectatorUi();
+    renderPlayers();
+  }else if(s.phase==="werewolf"){
+    show("werewolfGame");
+    if($("werewolfMode")){
+      $("werewolfMode").textContent=spectating
+        ?"กำลังชม · Werewolf"
+        :"กลางคืนใช้ความสามารถ · กลางวันคุยและโหวต · ผู้เล่น 5–"+(s.maxPlayers||8);
+    }
+    updateWerewolfUi(s);
     if(spectating) applySpectatorUi();
     renderPlayers();
   }else if(s.phase==="wheel"){
@@ -4193,7 +4252,7 @@ function renderLobby(msg){
       title.append(lock, document.createTextNode(label));
     }else title.textContent=label;
     const sub=document.createElement("small");
-    const cat=room.cat==="wheel"?"วงล้อสุ่มเลข":room.cat==="snake"?"บันไดงู":room.cat==="imposter"?"Imposter":room.cat==="cardmemory"?"Memory Card":"ห้ามโดนเลขลับ";
+    const cat=room.cat==="wheel"?"วงล้อสุ่มเลข":room.cat==="snake"?"บันไดงู":room.cat==="imposter"?"Imposter":room.cat==="cardmemory"?"Memory Card":room.cat==="werewolf"?"Werewolf":"ห้ามโดนเลขลับ";
     const state=room.phase==="lobby"?"รอผู้เล่น":"กำลังเล่น";
     const vis=priv?"ส่วนตัว":"สาธารณะ";
     sub.textContent=priv
@@ -4282,6 +4341,27 @@ function pushNums(){
   if(disc!=null) patch.discussionSec=disc;
   const vote=parseIntStrict(($("voteSec")&&$("voteSec").value)||"");
   if(vote!=null) patch.voteSec=vote;
+  const wwNight=parseIntStrict(($("wwNightSec")&&$("wwNightSec").value)||"");
+  if(wwNight!=null) patch.wwNightSec=wwNight;
+  const wwDisc=parseIntStrict(($("wwDiscussionSec")&&$("wwDiscussionSec").value)||"");
+  if(wwDisc!=null) patch.wwDiscussionSec=wwDisc;
+  const wwVote=parseIntStrict(($("wwVoteSec")&&$("wwVoteSec").value)||"");
+  if(wwVote!=null) patch.wwVoteSec=wwVote;
+  if($("wwTieRule")) patch.wwTieRule=$("wwTieRule").value==="random"?"random":"none";
+  if($("wwAllowSelfProtect")) patch.wwAllowSelfProtect=!!$("wwAllowSelfProtect").checked;
+  send({t:"setup",patch});
+}
+function pushWerewolf(){
+  if(applying||!isHost()||netPhase!=="lobby") return;
+  const patch={};
+  const wwNight=parseIntStrict(($("wwNightSec")&&$("wwNightSec").value)||"");
+  if(wwNight!=null) patch.wwNightSec=wwNight;
+  const wwDisc=parseIntStrict(($("wwDiscussionSec")&&$("wwDiscussionSec").value)||"");
+  if(wwDisc!=null) patch.wwDiscussionSec=wwDisc;
+  const wwVote=parseIntStrict(($("wwVoteSec")&&$("wwVoteSec").value)||"");
+  if(wwVote!=null) patch.wwVoteSec=wwVote;
+  if($("wwTieRule")) patch.wwTieRule=$("wwTieRule").value==="random"?"random":"none";
+  if($("wwAllowSelfProtect")) patch.wwAllowSelfProtect=!!$("wwAllowSelfProtect").checked;
   send({t:"setup",patch});
 }
 function pushSnakeMap(){
@@ -4495,6 +4575,11 @@ async function bootOnline(){
     const el=$(id);
     if(el) el.addEventListener("change",pushMemory);
   });
+  ["wwNightSec","wwDiscussionSec","wwVoteSec","wwTieRule","wwAllowSelfProtect"].forEach(id=>{
+    const el=$(id);
+    if(!el) return;
+    el.addEventListener(id==="wwAllowSelfProtect"||id==="wwTieRule"?"change":"input",pushWerewolf);
+  });
   setInterval(paintTurnClock, 250);
   function toggleAuto(){
     if(!onlineMode||spectating) return;
@@ -4616,6 +4701,7 @@ async function bootOnline(){
   ["leave","back","wheelLeave","pickLeave","snakeLeave"].forEach(id=>{ const el=$(id); if(el) el.onclick=()=>{ if(isHost()) send({t:"abort"}); }; });
   if($("imposterLeave")) $("imposterLeave").onclick=()=>{ if(isHost()) send({t:"abort"}); };
   if($("memoryLeave")) $("memoryLeave").onclick=()=>{ if(isHost()) send({t:"abort"}); };
+  if($("werewolfLeave")) $("werewolfLeave").onclick=()=>{ if(isHost()) send({t:"abort"}); };
   $("pickGo").onclick=()=>{ if(isHost()) send({t:"openWheel"}); };
   $("pickUndo").onclick=()=>send({t:"undo"});
   $("doSpin").onclick=()=>{ if(isHost()) send({t:"spinNum"}); };

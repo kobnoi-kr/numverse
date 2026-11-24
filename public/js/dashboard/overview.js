@@ -9,10 +9,11 @@ function modeLabel(mode) {
   if (mode === "snake") return "บันไดงู";
   if (mode === "imposter") return "Imposter";
   if (mode === "cardmemory") return "Memory Card";
+  if (mode === "werewolf") return "Werewolf";
   return "หาเลข";
 }
 function modeCat(mode) {
-  if (mode === "wheel" || mode === "snake" || mode === "imposter" || mode === "cardmemory") return mode;
+  if (mode === "wheel" || mode === "snake" || mode === "imposter" || mode === "cardmemory" || mode === "werewolf") return mode;
   return "secret";
 }
 

@@ -49,6 +49,14 @@ const GAMES = [
     blurb: "พลิกไพ่จับคู่ความจำ — Coming Soon ในคลังเกม",
     defaultBeta: false,
     defaultComingSoon: true
+  },
+  {
+    id: "werewolf",
+    defaultName: "Werewolf",
+    en: "Werewolf",
+    blurb: "หมาป่า · ชาวบ้าน · ความสามารถกลางคืน — Coming Soon ในคลังเกม",
+    defaultBeta: false,
+    defaultComingSoon: true
   }
 ];
 
@@ -59,6 +67,7 @@ function modeLabel(mode) {
   if (mode === "imposter") return "Imposter";
   if (mode === "race2048") return "2048 Race";
   if (mode === "cardmemory") return "Card Memory";
+  if (mode === "werewolf") return "Werewolf";
   return mode || "—";
 }
 

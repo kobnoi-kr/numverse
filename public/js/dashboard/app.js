@@ -32,7 +32,7 @@ const state = {
 
 function setCreateCat(cat) {
   const next =
-    cat === "wheel" ? "wheel" : cat === "snake" ? "snake" : cat === "imposter" ? "imposter" : cat === "cardmemory" ? "cardmemory" : "secret";
+    cat === "wheel" ? "wheel" : cat === "snake" ? "snake" : cat === "imposter" ? "imposter" : cat === "cardmemory" ? "cardmemory" : cat === "werewolf" ? "werewolf" : "secret";
   state.pendingCat = next;
   const hidden = document.getElementById("crCat");
   if (hidden) hidden.value = next;
@@ -69,7 +69,7 @@ function readLastPlayedLocal() {
   if (!key) return "";
   try {
     const v = localStorage.getItem(key) || "";
-    return v === "wheel" || v === "snake" || v === "secret" || v === "imposter" || v === "cardmemory" ? v : "";
+    return v === "wheel" || v === "snake" || v === "secret" || v === "imposter" || v === "cardmemory" || v === "werewolf" ? v : "";
   } catch (_) {
     return "";
   }
@@ -83,7 +83,7 @@ function writeLastPlayedLocal(mode) {
   } catch (_) {}
 }
 function normalizeMode(mode) {
-  return mode === "wheel" || mode === "snake" || mode === "secret" || mode === "imposter" || mode === "cardmemory"
+  return mode === "wheel" || mode === "snake" || mode === "secret" || mode === "imposter" || mode === "cardmemory" || mode === "werewolf"
     ? mode
     : "";
 }
@@ -136,7 +136,7 @@ async function createRoomFromModal() {
   const catEl = document.getElementById("crCat");
   const raw = (catEl && catEl.value) || state.pendingCat || "secret";
   const cat =
-    raw === "wheel" ? "wheel" : raw === "snake" ? "snake" : raw === "imposter" ? "imposter" : raw === "cardmemory" ? "cardmemory" : "secret";
+    raw === "wheel" ? "wheel" : raw === "snake" ? "snake" : raw === "imposter" ? "imposter" : raw === "cardmemory" ? "cardmemory" : raw === "werewolf" ? "werewolf" : "secret";
   state.pendingCat = cat;
   writeCreateCat(cat);
   const body = {

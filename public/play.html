@@ -26,6 +26,7 @@ html,body{background:#070b14}
 <link rel="stylesheet" href="/css/ui-dialog.css">
 <link rel="stylesheet" href="/css/snake-ladders.css">
 <link rel="stylesheet" href="/css/imposter.css?v=imp19">
+<link rel="stylesheet" href="/css/werewolf.css?v=ww1">
 <link rel="stylesheet" href="/css/memory.css?v=mem5">
 </head>
 <body>
@@ -200,6 +201,14 @@ html,body{background:#070b14}
     <button class="btn ghost" type="button" id="memoryLeave">กลับห้อง</button>
   </section>
 
+  <section id="werewolfGame" class="hidden">
+    <h1 class="sr-only">Werewolf</h1>
+    <p id="werewolfSpectateNote" class="snake-spectate-note hidden" role="status">โหมด Spectator — ดูได้อย่างเดียว</p>
+    <p class="sub" id="werewolfMode">กลางคืนใช้ความสามารถ · กลางวันคุยและโหวต</p>
+    <div id="werewolfRoot" class="werewolf-root"></div>
+    <button class="btn ghost" type="button" id="werewolfLeave">กลับห้อง</button>
+  </section>
+
   <section id="wheelGame" class="hidden">
     <div class="brand compact" aria-label="NUMVERSE">
       <img class="brand-logo" src="/images/numverse.png" alt="NUMVERSE" width="640" height="360" decoding="async">
@@ -322,6 +331,7 @@ html,body{background:#070b14}
         <button type="button" class="game-pick-card" data-cat="snake" aria-pressed="false" tabindex="-1"></button>
         <button type="button" class="game-pick-card" data-cat="imposter" aria-pressed="false" tabindex="-1"></button>
         <button type="button" class="game-pick-card" data-cat="cardmemory" aria-pressed="false" tabindex="-1"></button>
+        <button type="button" class="game-pick-card" data-cat="werewolf" aria-pressed="false" tabindex="-1"></button>
       </div>
       <div id="numberSetup">
         <p class="label">เลือกช่วงตัวเลข</p>
@@ -396,6 +406,36 @@ html,body{background:#070b14}
         <div class="row count-row"><label for="voteSec">เวลา Voting (วินาที)</label>
           <input id="voteSec" type="number" inputmode="numeric" value="45" min="20" max="120">
         </div>
+      </div>
+      <div id="werewolfOnly" class="hidden">
+        <p class="hint">Werewolf · ผู้เล่น 5–8 คน · กลางคืนใช้ความสามารถ · กลางวันคุยและโหวต · การ์ดนางฟ้าใช้ไม่ได้</p>
+        <div class="ww-lobby-roles" aria-label="บทบาทในเกม">
+          <img src="/images/werewolf/werewolf.png" alt="Werewolf" width="120" height="120" decoding="async">
+          <img src="/images/werewolf/villager.png" alt="Villager" width="120" height="120" decoding="async">
+          <img src="/images/werewolf/seer.png" alt="Seer" width="120" height="120" decoding="async">
+          <img src="/images/werewolf/witch.png" alt="Witch" width="120" height="120" decoding="async">
+          <img src="/images/werewolf/guardian.png" alt="Guardian" width="120" height="120" decoding="async">
+          <img src="/images/werewolf/hunter.png" alt="Hunter" width="120" height="120" decoding="async">
+        </div>
+        <div class="row count-row"><label for="wwNightSec">เวลากลางคืน (วินาที)</label>
+          <input id="wwNightSec" type="number" inputmode="numeric" value="30" min="15" max="90">
+        </div>
+        <div class="row count-row"><label for="wwDiscussionSec">เวลาพูดคุย (วินาที)</label>
+          <input id="wwDiscussionSec" type="number" inputmode="numeric" value="60" min="20" max="180">
+        </div>
+        <div class="row count-row"><label for="wwVoteSec">เวลาโหวต (วินาที)</label>
+          <input id="wwVoteSec" type="number" inputmode="numeric" value="45" min="15" max="120">
+        </div>
+        <div class="row count-row"><label for="wwTieRule">โหวตเสมอ</label>
+          <select id="wwTieRule" class="input">
+            <option value="none">ไม่กำจัดใคร</option>
+            <option value="random">สุ่มจากคะแนนสูงสุด</option>
+          </select>
+        </div>
+        <label class="row" style="gap:8px;align-items:center">
+          <input id="wwAllowSelfProtect" type="checkbox" checked>
+          <span>ผู้พิทักษ์ปกป้องตัวเองได้</span>
+        </label>
       </div>
       <div id="memoryOnly" class="hidden">
         <p class="hint">Memory Card · ผู้เล่น 2–8 คน · เปิดทีละ 2 ใบ · จับคู่ถูกได้คะแนน</p>
@@ -654,8 +694,9 @@ html,body{background:#070b14}
     window.NVSnake = { createLiveBoard, paintSnakeMapPreview };
     await import("/js/imposter/live-ui.js?v=imp19");
     await import("/js/memory/live-ui.js?v=mem5");
+    await import("/js/werewolf/live-ui.js?v=ww1");
     const s = document.createElement("script");
-    s.src = "/js/game.js?v=imp21";
+    s.src = "/js/game.js?v=ww1";
     document.body.appendChild(s);
   } else {
     restoreBanNotice();

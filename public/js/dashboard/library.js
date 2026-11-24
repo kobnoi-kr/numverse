@@ -76,6 +76,19 @@ const FALLBACK = [
       "ผู้เล่น 2–8 คน เปิดการ์ดทีละ 2 ใบ จำตำแหน่งแล้วจับคู่ภาพที่เหมือนกัน\nจับคู่ถูกได้คะแนน จับคู่ผิดการ์ดจะคว่ำกลับแล้วเปลี่ยนเทิร์น\nโฮสต์เลือกขนาดกระดาน เวลาต่อเทิร์น คะแนนต่อคู่ และกติกาเปลี่ยนเทิร์นได้\nจับคู่ครบแล้วคนคะแนนสูงสุดชนะ",
     popular: false,
     comingSoon: true
+  },
+  {
+    id: "werewolf",
+    name: "Werewolf",
+    nameEn: "Werewolf",
+    category: "social",
+    categoryLabel: "สืบหา",
+    maxPlayers: 8,
+    description: "หมู่บ้านแห่งความลับ — หาหมาป่าก่อนที่หมู่บ้านจะพัง",
+    howTo:
+      "ผู้เล่น 5–8 คน ได้บทบาทลับ: หมาป่า ชาวบ้าน ผู้หยั่งรู้ แม่มด ผู้พิทักษ์ นักล่า\nกลางคืนใช้ความสามารถตามบทบาท กลางวันคุยและโหวตกำจัดผู้ต้องสงสัย\nฝ่ายหมู่บ้านชนะเมื่อหมาป่าถูกกำจัดครบ ฝ่ายหมาป่าชนะเมื่อจำนวนหมาป่าไม่น้อยกว่าฝ่ายตรงข้าม\nการ์ดนางฟ้าใช้ในเกมนี้ไม่ได้",
+    popular: false,
+    comingSoon: true
   }
 ];
 
@@ -86,6 +99,9 @@ function thumbFor(id) {
   if (id === "imposter") return "🕵️";
   if (id === "race2048") return "🏁";
   if (id === "cardmemory") return "🃏";
+  if (id === "werewolf") {
+    return `<img src="/images/werewolf/werewolf.png" alt="" width="72" height="72" decoding="async">`;
+  }
   return "🎮";
 }
 
@@ -99,7 +115,9 @@ function rememberCreateCat(id) {
             ? "imposter"
             : id === "cardmemory"
               ? "cardmemory"
-              : id === "secret"
+              : id === "werewolf"
+                ? "werewolf"
+                : id === "secret"
             ? "secret"
             : "";
   if (!mode) return;
@@ -132,7 +150,8 @@ export async function renderLibrary(root, { openCreate, lastPlayedMode, user } =
         lastPlayedMode === "snake" ||
         lastPlayedMode === "secret" ||
         lastPlayedMode === "imposter" ||
-        lastPlayedMode === "cardmemory"
+        lastPlayedMode === "cardmemory" ||
+        lastPlayedMode === "werewolf"
         ? lastPlayedMode
         : ""
       : "";

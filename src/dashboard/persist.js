@@ -56,7 +56,9 @@ async function persistFinishedGame(room, scoreOf) {
                 ? "imposter"
                 : room.cat === "cardmemory"
                   ? "cardmemory"
-                  : "secret",
+                  : room.cat === "werewolf"
+                    ? "werewolf"
+                    : "secret",
         visibility: room.visibility === "private" ? "private" : "public",
         status: "finished",
         playerCount: players.length,
@@ -114,7 +116,9 @@ async function persistFinishedGame(room, scoreOf) {
                   ? "imposter"
                   : room.cat === "cardmemory"
                     ? "cardmemory"
-                    : "secret"
+                    : room.cat === "werewolf"
+                      ? "werewolf"
+                      : "secret"
         },
         update: {
           totalGames,
@@ -134,7 +138,9 @@ async function persistFinishedGame(room, scoreOf) {
                   ? "imposter"
                   : room.cat === "cardmemory"
                     ? "cardmemory"
-                    : "secret"
+                    : room.cat === "werewolf"
+                      ? "werewolf"
+                      : "secret"
         }
       });
 

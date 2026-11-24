@@ -102,6 +102,21 @@ const GAME_CATALOG = [
     popular: false,
     beta: false,
     comingSoon: true
+  },
+  {
+    id: "werewolf",
+    slug: "werewolf",
+    name: "Werewolf",
+    nameEn: "Werewolf",
+    category: "social",
+    categoryLabel: "สืบหา",
+    maxPlayers: 8,
+    description: "หมู่บ้านแห่งความลับ — หาหมาป่าก่อนที่หมู่บ้านจะพัง",
+    howTo:
+      "ผู้เล่น 5–8 คน ได้บทบาทลับ: หมาป่า ชาวบ้าน ผู้หยั่งรู้ แม่มด ผู้พิทักษ์ นักล่า\nกลางคืนใช้ความสามารถตามบทบาท กลางวันคุยและโหวตกำจัดผู้ต้องสงสัย\nฝ่ายหมู่บ้านชนะเมื่อหมาป่าถูกกำจัดครบ ฝ่ายหมาป่าชนะเมื่อจำนวนหมาป่าไม่น้อยกว่าฝ่ายตรงข้าม\nการ์ดนางฟ้าใช้ในเกมนี้ไม่ได้",
+    popular: false,
+    beta: false,
+    comingSoon: true
   }
 ];
 
@@ -415,7 +430,9 @@ async function handleDashboardApi(req, res, pathname) {
                 ? "Imposter"
                 : r.game.gameMode === "cardmemory"
                   ? "Memory Card"
-                  : "หาเลข") +
+                  : r.game.gameMode === "werewolf"
+                    ? "Werewolf"
+                    : "หาเลข") +
           " · " +
           (r.won ? "ชนะ" : "เล่น") +
           " · #" +

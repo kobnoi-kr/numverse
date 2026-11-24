@@ -4,7 +4,8 @@
 const DEFAULT_COMING_SOON = {
   imposter: true,
   race2048: true,
-  cardmemory: true
+  cardmemory: true,
+  werewolf: true
 };
 
 const TEST_INVITES_KEY = "game_test_invites";

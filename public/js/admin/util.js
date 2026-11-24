@@ -37,5 +37,6 @@ export function modeLabel(mode) {
   if (mode === "snake") return "บันไดงู";
   if (mode === "imposter") return "Imposter";
   if (mode === "cardmemory") return "Memory Card";
+  if (mode === "werewolf") return "Werewolf";
   return "หาเลข";
 }
