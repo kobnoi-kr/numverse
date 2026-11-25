@@ -37,15 +37,24 @@
     let lastCountdownSec = -1;
     let localDeadline = 0;
     let clockKey = 0;
+    let witchMode = null;
+    let pickedId = null;
+    let village3d = null;
+    let village3dFailed = false;
 
     root.innerHTML = `
       <div class="ww-root">
-        <div class="ww-phase">
-          <div class="ww-phase-badge" data-ww="phaseBadge">DAY</div>
-          <h2 class="ww-phase-title" data-ww="phaseTitle">—</h2>
-          <div class="ww-timer" data-ww="timer">—</div>
+        <div class="ww-stage-wrap">
+          <div class="ww-village hidden" data-ww="village3d" aria-label="หมู่บ้านหมาป่า 3D"></div>
+          <div class="ww-hud">
+            <div class="ww-phase">
+              <div class="ww-phase-badge" data-ww="phaseBadge">DAY</div>
+              <h2 class="ww-phase-title" data-ww="phaseTitle">—</h2>
+              <div class="ww-timer" data-ww="timer">—</div>
+            </div>
+            <p class="sub" data-ww="sub"></p>
+          </div>
         </div>
-        <p class="sub" data-ww="sub"></p>
         <div class="ww-you-card hidden" data-ww="youCard"></div>
         <div class="ww-action hidden" data-ww="action"></div>
         <div class="ww-roster" data-ww="roster" role="list"></div>
@@ -55,6 +64,7 @@
     `;
 
     const el = {
+      village3d: root.querySelector('[data-ww="village3d"]'),
       phaseBadge: root.querySelector('[data-ww="phaseBadge"]'),
       phaseTitle: root.querySelector('[data-ww="phaseTitle"]'),
       timer: root.querySelector('[data-ww="timer"]'),
@@ -71,6 +81,71 @@
       if (!pub) return [];
       const alive = new Set(pub.alive || []);
       return (lastMeta.players || []).filter((p) => alive.has(String(p.id)));
+    }
+
+    function handleHousePick(id) {
+      const pub = lastPublic;
+      const priv = lastPrivate;
+      if (!pub || !priv) return;
+      const sid = String(id);
+      const youId = String(lastMeta.youId || "");
+
+      if (pub.phase === "NIGHT" && pub.canNightAct && priv.alive) {
+        const role = priv.role;
+        let type = null;
+        if (role === "werewolf") type = "attack";
+        else if (role === "seer") type = "inspect";
+        else if (role === "guardian") type = "protect";
+        else if (role === "witch") type = witchMode;
+        if (!type) return;
+        if (role === "werewolf" && (sid === youId || (priv.peers || []).includes(sid))) return;
+        if ((role === "seer" || role === "witch") && sid === youId && type !== "heal") return;
+        pickedId = sid;
+        witchMode = null;
+        send({ t: "ww:night", type: type, targetId: sid });
+        paintAction();
+        syncVillage();
+        return;
+      }
+
+      if (pub.phase === "VOTING" && pub.canVote) {
+        if (sid === youId) return;
+        pickedId = sid;
+        send({ t: "ww:vote", targetId: sid });
+        paintAction();
+        syncVillage();
+        return;
+      }
+
+      if (pub.phase === "HUNTER_SHOT" && pub.canHunterShot) {
+        pickedId = sid;
+        send({ t: "ww:hunter", targetId: sid });
+        paintAction();
+        syncVillage();
+      }
+    }
+
+    function ensureVillage() {
+      if (village3d || village3dFailed || !window.NVWerewolfVillage3D) return village3d;
+      const host = el.village3d;
+      if (!host) return null;
+      village3d = window.NVWerewolfVillage3D.create(host, {
+        onPick: handleHousePick,
+        onFail() {
+          village3d = null;
+          village3dFailed = true;
+          host.classList.add("hidden");
+          paintRoster();
+        }
+      });
+      return village3d;
+    }
+
+    function syncVillage() {
+      const v = ensureVillage();
+      if (!v || !lastPublic) return;
+      el.roster.classList.add("hidden");
+      v.update(lastPublic, { pickedId: pickedId });
     }
 
     function paintYouCard() {
@@ -112,6 +187,11 @@
         el.roster.innerHTML = "";
         return;
       }
+      if (ensureVillage()) {
+        el.roster.classList.add("hidden");
+        return;
+      }
+      el.roster.classList.remove("hidden");
       const alive = new Set(pub.alive || []);
       const youId = String(lastMeta.youId || "");
       el.roster.innerHTML = (pub.order || [])
@@ -156,7 +236,7 @@
         .join("");
     }
 
-    function targetButtons(onPick, extraFilter) {
+    function targetButtons(extraFilter) {
       const list = alivePlayers().filter((p) => {
         if (typeof extraFilter === "function" && !extraFilter(p)) return false;
         return true;
@@ -170,6 +250,10 @@
         .join("")}</div>`;
     }
 
+    function use3dPick() {
+      return !!ensureVillage() && !village3dFailed;
+    }
+
     function paintAction() {
       const pub = lastPublic;
       const priv = lastPrivate;
@@ -177,6 +261,7 @@
       el.action.innerHTML = "";
       if (!pub || !priv) return;
       const youId = String(lastMeta.youId || "");
+      const tap = use3dPick();
 
       if (pub.phase === "ROLE_REVEAL" && pub.canConfirm) {
         el.action.classList.remove("hidden");
@@ -189,38 +274,60 @@
         el.action.classList.remove("hidden");
         const role = priv.role;
         if (role === "werewolf") {
-          el.action.innerHTML = `<p class="label">เลือกเหยื่อ</p>${targetButtons(null, (p) => String(p.id) !== youId && !(priv.peers || []).includes(String(p.id)))}`;
-          el.action.querySelectorAll(".ww-target").forEach((btn) => {
-            btn.onclick = () => send({ t: "ww:night", type: "attack", targetId: btn.getAttribute("data-id") });
-          });
+          el.action.innerHTML = tap
+            ? `<p class="label">แตะบ้านเพื่อเลือกเหยื่อ</p>`
+            : `<p class="label">เลือกเหยื่อ</p>${targetButtons((p) => String(p.id) !== youId && !(priv.peers || []).includes(String(p.id)))}`;
+          if (!tap) {
+            el.action.querySelectorAll(".ww-target").forEach((btn) => {
+              btn.onclick = () => send({ t: "ww:night", type: "attack", targetId: btn.getAttribute("data-id") });
+            });
+          }
         } else if (role === "seer") {
-          el.action.innerHTML = `<p class="label">ตรวจผู้เล่น</p>${targetButtons(null, (p) => String(p.id) !== youId)}`;
-          el.action.querySelectorAll(".ww-target").forEach((btn) => {
-            btn.onclick = () => send({ t: "ww:night", type: "inspect", targetId: btn.getAttribute("data-id") });
-          });
+          el.action.innerHTML = tap
+            ? `<p class="label">แตะบ้านเพื่อตรวจว่าเป็นหมาป่าหรือไม่</p>`
+            : `<p class="label">ตรวจผู้เล่น</p>${targetButtons((p) => String(p.id) !== youId)}`;
+          if (!tap) {
+            el.action.querySelectorAll(".ww-target").forEach((btn) => {
+              btn.onclick = () => send({ t: "ww:night", type: "inspect", targetId: btn.getAttribute("data-id") });
+            });
+          }
         } else if (role === "guardian") {
-          el.action.innerHTML = `<p class="label">ปกป้องใคร</p>${targetButtons()}`;
-          el.action.querySelectorAll(".ww-target").forEach((btn) => {
-            btn.onclick = () => send({ t: "ww:night", type: "protect", targetId: btn.getAttribute("data-id") });
-          });
+          el.action.innerHTML = tap
+            ? `<p class="label">แตะบ้านเพื่อปกป้อง</p>`
+            : `<p class="label">ปกป้องใคร</p>${targetButtons()}`;
+          if (!tap) {
+            el.action.querySelectorAll(".ww-target").forEach((btn) => {
+              btn.onclick = () => send({ t: "ww:night", type: "protect", targetId: btn.getAttribute("data-id") });
+            });
+          }
         } else if (role === "witch") {
           const healLeft = Number(priv.witchHealLeft) || 0;
           const poisonLeft = Number(priv.witchPoisonLeft) || 0;
           el.action.innerHTML = `
-            <p class="label">ยาแม่มด · ชุบชีวิตเหลือ ${healLeft} · พิษเหลือ ${poisonLeft}</p>
+            <p class="label">ยาแม่มด · ชุบชีวิตเหลือ ${healLeft} · พิษเหลือ ${poisonLeft}${
+              witchMode ? " — แตะบ้านเป้าหมาย" : ""
+            }</p>
             <div class="ww-witch-actions">
               <button type="button" class="btn ghost" data-ww-act="pass">ไม่ใช้ยา</button>
-              ${healLeft ? `<button type="button" class="btn ghost" data-ww-act="heal">ใช้ยาชุบชีวิต</button>` : ""}
-              ${poisonLeft ? `<button type="button" class="btn ghost" data-ww-act="poison">ใช้ยาพิษ</button>` : ""}
+              ${healLeft ? `<button type="button" class="btn ghost${witchMode === "heal" ? " on" : ""}" data-ww-act="heal">ใช้ยาชุบชีวิต</button>` : ""}
+              ${poisonLeft ? `<button type="button" class="btn ghost${witchMode === "poison" ? " on" : ""}" data-ww-act="poison">ใช้ยาพิษ</button>` : ""}
             </div>
             <div data-ww="witchTargets"></div>
           `;
           const box = el.action.querySelector('[data-ww="witchTargets"]');
-          el.action.querySelector('[data-ww-act="pass"]').onclick = () => send({ t: "ww:night", type: "pass" });
+          el.action.querySelector('[data-ww-act="pass"]').onclick = () => {
+            witchMode = null;
+            send({ t: "ww:night", type: "pass" });
+          };
           const healBtn = el.action.querySelector('[data-ww-act="heal"]');
           const poisonBtn = el.action.querySelector('[data-ww-act="poison"]');
           if (healBtn) {
             healBtn.onclick = () => {
+              if (tap) {
+                witchMode = witchMode === "heal" ? null : "heal";
+                paintAction();
+                return;
+              }
               box.innerHTML = `<p class="label">เลือกผู้ถูกชุบ</p>${targetButtons()}`;
               box.querySelectorAll(".ww-target").forEach((btn) => {
                 btn.onclick = () => send({ t: "ww:night", type: "heal", targetId: btn.getAttribute("data-id") });
@@ -229,7 +336,12 @@
           }
           if (poisonBtn) {
             poisonBtn.onclick = () => {
-              box.innerHTML = `<p class="label">เลือกผู้ถูกวางยา</p>${targetButtons(null, (p) => String(p.id) !== youId)}`;
+              if (tap) {
+                witchMode = witchMode === "poison" ? null : "poison";
+                paintAction();
+                return;
+              }
+              box.innerHTML = `<p class="label">เลือกผู้ถูกวางยา</p>${targetButtons((p) => String(p.id) !== youId)}`;
               box.querySelectorAll(".ww-target").forEach((btn) => {
                 btn.onclick = () => send({ t: "ww:night", type: "poison", targetId: btn.getAttribute("data-id") });
               });
@@ -245,30 +357,42 @@
         return;
       }
 
+      if (pub.phase === "NIGHT" && !pub.canNightAct) {
+        el.action.classList.remove("hidden");
+        el.action.innerHTML = `<p class="hint">คุณหลับอยู่ รอเช้า…</p>`;
+        return;
+      }
+
       if (pub.phase === "VOTING" && pub.canVote) {
         el.action.classList.remove("hidden");
-        el.action.innerHTML = `
-          <p class="label">โหวตผู้ต้องสงสัย</p>
-          ${targetButtons(null, (p) => String(p.id) !== youId)}
-          <button type="button" class="btn ghost" data-ww-act="abstain">งดโหวต</button>
-        `;
-        el.action.querySelectorAll(".ww-target").forEach((btn) => {
-          btn.onclick = () => send({ t: "ww:vote", targetId: btn.getAttribute("data-id") });
-        });
+        el.action.innerHTML = tap
+          ? `<p class="label">แตะบ้านของคนที่สงสัยเพื่อโหวตออก</p>
+             <button type="button" class="btn ghost" data-ww-act="abstain">งดโหวต</button>`
+          : `<p class="label">โหวตผู้ต้องสงสัย</p>
+             ${targetButtons((p) => String(p.id) !== youId)}
+             <button type="button" class="btn ghost" data-ww-act="abstain">งดโหวต</button>`;
+        if (!tap) {
+          el.action.querySelectorAll(".ww-target").forEach((btn) => {
+            btn.onclick = () => send({ t: "ww:vote", targetId: btn.getAttribute("data-id") });
+          });
+        }
         el.action.querySelector('[data-ww-act="abstain"]').onclick = () => send({ t: "ww:vote", targetId: null });
         return;
       }
 
       if (pub.phase === "HUNTER_SHOT" && pub.canHunterShot) {
         el.action.classList.remove("hidden");
-        el.action.innerHTML = `
-          <p class="label">ยิงครั้งสุดท้าย</p>
-          ${targetButtons()}
-          <button type="button" class="btn ghost" data-ww-act="skipShot">ไม่ยิง</button>
-        `;
-        el.action.querySelectorAll(".ww-target").forEach((btn) => {
-          btn.onclick = () => send({ t: "ww:hunter", targetId: btn.getAttribute("data-id") });
-        });
+        el.action.innerHTML = tap
+          ? `<p class="label">แตะบ้านเพื่อยิงครั้งสุดท้าย</p>
+             <button type="button" class="btn ghost" data-ww-act="skipShot">ไม่ยิง</button>`
+          : `<p class="label">ยิงครั้งสุดท้าย</p>
+             ${targetButtons()}
+             <button type="button" class="btn ghost" data-ww-act="skipShot">ไม่ยิง</button>`;
+        if (!tap) {
+          el.action.querySelectorAll(".ww-target").forEach((btn) => {
+            btn.onclick = () => send({ t: "ww:hunter", targetId: btn.getAttribute("data-id") });
+          });
+        }
         el.action.querySelector('[data-ww-act="skipShot"]').onclick = () => send({ t: "ww:hunter", targetId: null });
       }
     }
@@ -307,9 +431,14 @@
     }
 
     function paint(pub, priv, meta) {
+      const prevPhase = lastPublic && lastPublic.phase;
       lastPublic = pub || null;
       lastPrivate = priv || null;
       lastMeta = meta || lastMeta;
+      if (pub && pub.phase !== prevPhase) {
+        pickedId = null;
+        witchMode = null;
+      }
       if (pub && pub.phaseEndsAt) {
         if (pub.phaseEndsAt !== clockKey) {
           clockKey = pub.phaseEndsAt;
@@ -323,6 +452,7 @@
       paintHeader();
       paintYouCard();
       paintAction();
+      syncVillage();
       paintRoster();
       paintLog();
       paintTallies();
@@ -334,6 +464,10 @@
       paint,
       halt() {
         clearInterval(timer);
+        if (village3d) {
+          village3d.destroy();
+          village3d = null;
+        }
       }
     };
   }

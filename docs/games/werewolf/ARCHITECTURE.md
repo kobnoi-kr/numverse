@@ -16,10 +16,19 @@ src/games/werewolf/
 ├── index.js
 └── room-bridge.js
 
+public/js/werewolf/village-3d.js  # NVWerewolfVillage3D (from werewolf-village-3d.html)
 public/js/werewolf/live-ui.js
 public/css/werewolf.css
 public/images/werewolf/*.png
+
+packages/werewolf/               # extracted copy for port / standalone work
 ```
+
+## 3D village
+
+- Lazy-loads Three.js r128; onFail → 2D roster fallback
+- Houses in a ring; night/day lighting; wolf attack on morning victims
+- Tap house to pick night/vote/hunter targets
 
 ## Flow
 

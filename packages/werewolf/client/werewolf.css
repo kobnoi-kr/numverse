@@ -1,0 +1,287 @@
+body.werewolf-play .stage {
+  max-width: min(100vw - 16px, 920px);
+}
+
+.ww-lobby-roles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.ww-lobby-roles img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: #0b1220;
+  display: block;
+}
+
+@media (max-width: 720px) {
+  .ww-lobby-roles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ww-root {
+  --ww-ink: #eef0ff;
+  --ww-muted: #a5a9d6;
+  --ww-panel: rgba(14, 16, 48, 0.72);
+  --ww-line: rgba(165, 169, 214, 0.28);
+  --ww-accent: #7c6cff;
+  --ww-moon: #ffd98a;
+  display: grid;
+  gap: 14px;
+  color: var(--ww-ink);
+  font-family: "Kanit", "Noto Sans Thai", system-ui, sans-serif;
+}
+
+.ww-stage-wrap {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--ww-line);
+  background: #0d1030;
+}
+
+.ww-village {
+  width: 100%;
+  height: clamp(360px, 64vh, 580px);
+  touch-action: none;
+}
+
+.ww-village.hidden {
+  display: none;
+}
+
+.ww3d-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.ww3d-loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 240px;
+  color: var(--ww-muted);
+  font-weight: 600;
+}
+
+.ww-hud {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ww-hud .ww-phase,
+.ww-hud .sub {
+  pointer-events: none;
+}
+
+.ww-witch-actions .btn.on,
+.ww-witch-actions .btn.ghost.on {
+  background: var(--ww-accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.ww-root.ww-night {
+  background:
+    radial-gradient(ellipse at top, rgba(88, 28, 135, 0.28), transparent 55%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.35), transparent 40%);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.ww-root.ww-day {
+  background:
+    radial-gradient(ellipse at top, rgba(251, 191, 36, 0.16), transparent 50%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.2), transparent 40%);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.ww-phase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.ww-phase-badge {
+  font: 700 0.75rem/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #111827;
+}
+
+.ww-phase-badge.is-night {
+  background: #7c3aed;
+  color: #f8fafc;
+}
+
+.ww-phase-title {
+  margin: 0;
+  flex: 1;
+  font-size: 1.2rem;
+}
+
+.ww-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.ww-you-card {
+  display: grid;
+}
+
+.ww-role-card {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--ww-role) 70%, white 10%);
+  background: var(--ww-panel);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.ww-role-art {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+  background: #0b1220;
+}
+
+.ww-role-meta h3 {
+  margin: 4px 0 8px;
+  font-size: 1.25rem;
+}
+
+.ww-role-team {
+  margin: 0;
+  color: var(--ww-role);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ww-role-meta p {
+  margin: 0 0 8px;
+  color: var(--ww-muted);
+}
+
+.ww-peers,
+.ww-inspect {
+  color: var(--ww-ink) !important;
+  font-weight: 600;
+}
+
+.ww-action {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--ww-line);
+  background: rgba(2, 6, 23, 0.45);
+}
+
+.ww-targets,
+.ww-witch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ww-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.ww-seat {
+  border: 1px solid var(--ww-line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.ww-seat.is-you {
+  border-color: rgba(96, 165, 250, 0.7);
+}
+
+.ww-seat.is-dead {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+
+.ww-seat-name {
+  display: block;
+  font-weight: 700;
+}
+
+.ww-seat-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--ww-muted);
+  font-size: 0.85rem;
+}
+
+.ww-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.ww-log-item {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--ww-line);
+  font-size: 0.92rem;
+}
+
+.ww-log-death,
+.ww-log-hunter {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.ww-log-night {
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+.ww-tallies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ww-tallies li {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+@media (max-width: 640px) {
+  .ww-role-card {
+    grid-template-columns: 1fr;
+  }
+}
