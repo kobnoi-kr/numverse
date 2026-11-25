@@ -7,7 +7,7 @@ import { renderRooms } from "./rooms.js?v=last1";
 import { renderFriends } from "./friends.js";
 import { renderRanking } from "./ranking.js";
 import { renderProfile } from "./profile.js";
-import { renderDecorate } from "./decorate.js?v=lvlock1";
+import { renderDecorate } from "./decorate.js?v=rankexp1";
 import { renderShop } from "./shop.js?v=pts299";
 import { renderInventory } from "./inventory.js?v=inv-popup1";
 import { renderPtsHistory } from "./pts-history.js?v=1";

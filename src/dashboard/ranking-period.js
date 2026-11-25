@@ -67,12 +67,15 @@ function rankingWindow(period, now = new Date()) {
   const monday = bangkokWallToUtc(p.year, p.month, p.day, 0, 0, 0);
   const since = addDaysUtc(monday, -daysSinceMonday);
   const resetsAt = addDaysUtc(since, 7);
+  // Label = Bangkok Monday date so each week grants once (not a static "week").
+  const mondayParts = bangkokParts(since);
+  const label = `${mondayParts.year}-${String(mondayParts.month).padStart(2, "0")}-${String(mondayParts.day).padStart(2, "0")}`;
   return {
     period: "weekly",
     timezone: "Asia/Bangkok",
     since,
     resetsAt,
-    label: "week"
+    label
   };
 }
 

@@ -299,10 +299,10 @@ const STARTER_COSMETICS = [
     id: "title.weekly.1",
     kind: "title",
     name: "Weekly Champion",
-    description: "แต้มสูงสุดประจำสัปดาห์เท่านั้น",
+    description: "แต้มสูงสุดประจำสัปดาห์ · หมดอายุเมื่อจบรอบถัดไป",
     shopPrice: null,
     cssClass: "title-weekly-1",
-    meta: { color: "#fbbf24", rank: 1, period: "weekly" }
+    meta: { color: "#fbbf24", rank: 1, period: "weekly", temporary: true }
   },
   {
     id: "title.weekly.2",
@@ -326,10 +326,10 @@ const STARTER_COSMETICS = [
     id: "title.monthly.1",
     kind: "title",
     name: "Monthly Legend",
-    description: "แต้มสูงสุดประจำเดือนเท่านั้น",
+    description: "แต้มสูงสุดประจำเดือน · หมดอายุเมื่อจบรอบถัดไป",
     shopPrice: null,
     cssClass: "title-monthly-1",
-    meta: { color: "#fbbf24", rank: 1, period: "monthly" }
+    meta: { color: "#fbbf24", rank: 1, period: "monthly", temporary: true }
   },
   {
     id: "title.monthly.2",
@@ -524,11 +524,15 @@ async function ensureCosmeticsCatalog(prisma, opts) {
   return cosmeticsEnsurePromise;
 }
 
-async function grantCosmetic(prisma, userId, cosmeticId, source) {
+async function grantCosmetic(prisma, userId, cosmeticId, source, opts) {
+  const expiresAt =
+    opts && Object.prototype.hasOwnProperty.call(opts, "expiresAt") ? opts.expiresAt : undefined;
+  const data = { source: source || "grant" };
+  if (expiresAt !== undefined) data.expiresAt = expiresAt;
   await prisma.userCosmetic.upsert({
     where: { userId_cosmeticId: { userId, cosmeticId } },
-    create: { userId, cosmeticId, source },
-    update: {}
+    create: { userId, cosmeticId, source: data.source, expiresAt: expiresAt || null },
+    update: data
   });
 }
 
@@ -769,6 +773,13 @@ async function loadUserCosmetics(prisma, userId) {
   await grantLevelTitlesUpTo(prisma, userId, peak);
   await ensureStarterCosmetics(prisma, userId);
   await syncEquippedLevelTitle(prisma, userId);
+  // Drop expired ranking titles from inventory / equipped extras before paint.
+  try {
+    const { revokeExpiredRankingTitlesForUser } = require("./ranking-rewards");
+    await revokeExpiredRankingTitlesForUser(prisma, userId);
+  } catch {
+    /* ignore circular / cold start */
+  }
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -781,21 +792,35 @@ async function loadUserCosmetics(prisma, userId) {
       }
     }
   });
-  const extraCosmetics = await loadExtraTitleCosmetics(
-    prisma,
-    user && user.equippedExtraTitleIds
-  );
+  const now = Date.now();
+  const liveCosmetics = ((user && user.cosmetics) || []).filter((row) => {
+    if (!row || !row.cosmetic) return false;
+    if (row.expiresAt && new Date(row.expiresAt).getTime() <= now) return false;
+    return true;
+  });
+  const ownedIds = new Set(liveCosmetics.map((row) => row.cosmeticId));
+  let extraIds = normalizeExtraTitleIds(user && user.equippedExtraTitleIds);
+  const prunedExtras = extraIds.filter((id) => ownedIds.has(id) || !isRankingTitleId(id));
+  if (prunedExtras.length !== extraIds.length && user) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { equippedExtraTitleIds: prunedExtras }
+    });
+    extraIds = prunedExtras;
+  }
+  const extraCosmetics = await loadExtraTitleCosmetics(prisma, extraIds);
   // Hide legacy starter title so inventory never shows duplicate มือใหม่.
-  const ownedPublic = ((user && user.cosmetics) || [])
-    .filter((row) => row.cosmetic && row.cosmetic.id !== "title.rookie")
+  const ownedPublic = liveCosmetics
+    .filter((row) => row.cosmetic.id !== "title.rookie")
     .map((row) => ({
       ...publicCosmetic(row.cosmetic),
       source: row.source,
-      acquiredAt: row.acquiredAt
+      acquiredAt: row.acquiredAt,
+      expiresAt: row.expiresAt || null
     }));
   return {
     owned: ownedPublic,
-    equipped: equippedBundle(user || {}, extraCosmetics)
+    equipped: equippedBundle({ ...(user || {}), equippedExtraTitleIds: extraIds }, extraCosmetics)
   };
 }
 
@@ -946,6 +971,16 @@ async function handleCosmeticsApi(req, res, pathname) {
     });
     if (!owned || !owned.cosmetic) {
       sendJson(res, 404, { error: "not_owned" });
+      return true;
+    }
+    if (owned.expiresAt && new Date(owned.expiresAt).getTime() <= Date.now()) {
+      try {
+        const { revokeExpiredRankingTitlesForUser } = require("./ranking-rewards");
+        await revokeExpiredRankingTitlesForUser(auth.prisma, auth.user.id);
+      } catch {
+        /* ignore */
+      }
+      sendJson(res, 410, { error: "title_expired" });
       return true;
     }
     const kind = owned.cosmetic.kind;
@@ -2225,6 +2260,7 @@ module.exports = {
   isLevelTitleId,
   normalizeExtraTitleIds,
   loadExtraTitleCosmetics,
+  clearCosmeticFromExtraTitles,
   publicCosmetic,
   equippedBundle,
   ensureCosmeticsCatalog,

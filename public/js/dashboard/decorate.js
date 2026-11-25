@@ -303,12 +303,30 @@ export async function renderDecorate(root, { user } = {}) {
           item.source === "level"
             ? "ยศเลเวล"
             : item.source === "ranking_weekly" || item.source === "ranking_monthly"
-              ? "Ranking"
+              ? "Ranking · หมดอายุตามรอบ"
               : item.source === "shop"
                 ? "Shop"
                 : item.source === "starter"
                   ? "เริ่มต้น"
                   : item.source || "";
+        const expireLabel = item.expiresAt
+          ? (() => {
+              try {
+                return (
+                  "ถึง " +
+                  new Date(item.expiresAt).toLocaleString("th-TH", {
+                    timeZone: "Asia/Bangkok",
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })
+                );
+              } catch {
+                return "มีวันหมดอายุ";
+              }
+            })()
+          : "";
         const tier = (item.tier || (item.meta && item.meta.tier) || "").toLowerCase();
         const tierPill =
           (item.kind === "frame" || item.kind === "effect") && tier
@@ -334,6 +352,7 @@ export async function renderDecorate(root, { user } = {}) {
           ${tierPill}
           <b>${esc(item.name)}</b>
           <span class="tiny muted">${esc(srcLabel)}</span>
+          ${expireLabel ? `<span class="tiny muted">${esc(expireLabel)}</span>` : ""}
           <span class="dec-wear">${wearLabel}</span>
         </button>`;
       })
