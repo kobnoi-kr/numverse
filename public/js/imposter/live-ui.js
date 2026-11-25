@@ -57,6 +57,7 @@
         <p class="sub" data-imp="sub"></p>
         <div class="imp-card-grid hidden" data-imp="cardGrid" role="group" aria-label="การ์ดบทบาท"></div>
         <div class="imp-you-profile hidden" data-imp="youProfile" aria-live="polite"></div>
+        <div class="imp-table3d" data-imp="table3d" aria-label="โต๊ะผู้เล่น 3D"></div>
         <div class="imp-roster" data-imp="roster" role="list" aria-label="ผู้เล่นในห้อง"></div>
         <button class="btn imp-clue-reopen hidden" type="button" data-imp="clueReopen">เขียนคำใบ้</button>
         <ul class="imp-clue-board" data-imp="clues"></ul>
@@ -64,6 +65,9 @@
         <ul class="imp-tallies hidden" data-imp="tallies"></ul>
       </div>
     `;
+
+    let table3d = null;
+    let table3dActive = false;
 
     // Mount overlays on body so they are never clipped by stage/layout.
     let overlay = document.getElementById("impRoleOverlay");
@@ -141,6 +145,51 @@
     const clueInput = $c("input");
     const guessForm = $g("form");
     const guessInput = $g("input");
+    const tableMount = $("table3d");
+    const rosterEl = $("roster");
+
+    function setTableMode(on) {
+      table3dActive = !!on;
+      if (tableMount) tableMount.classList.toggle("is-active", table3dActive);
+      if (rosterEl) rosterEl.classList.toggle("imp-roster-fallback", !table3dActive);
+      if (rosterEl) rosterEl.classList.toggle("hidden", table3dActive);
+    }
+    setTableMode(false);
+
+    if (
+      tableMount &&
+      window.NVImposterTable3D &&
+      typeof window.NVImposterTable3D.createTable3d === "function"
+    ) {
+      table3d = window.NVImposterTable3D.createTable3d({
+        mount: tableMount,
+        onVote(targetId) {
+          pickedVote = targetId;
+          send({ t: "imposter:vote", targetId });
+          if (lastPublic) paintRoster(lastPublic);
+          if (table3d && lastPublic) {
+            table3d.paint(lastPublic, {
+              players: lastMeta.players,
+              youId: String((opts.youId && opts.youId()) || lastMeta.youId || "")
+            });
+          }
+        },
+        onReady() {
+          setTableMode(true);
+          if (lastPublic) {
+            table3d.paint(lastPublic, {
+              players: lastMeta.players,
+              youId: String((opts.youId && opts.youId()) || lastMeta.youId || "")
+            });
+          }
+        },
+        onFallback() {
+          table3d = null;
+          setTableMode(false);
+        }
+      });
+      if (!table3d) setTableMode(false);
+    }
 
     function confirmRole() {
       popupOpen = false;
@@ -520,7 +569,9 @@
       else if (state.phase === "DISCUSSION") sub = "คุยกันผ่านแชทในห้อง";
       else if (state.phase === "VOTING")
         sub = state.canVote
-          ? "กดที่โปรไฟล์ผู้ต้องสงสัยเพื่อโหวต (โหวตตัวเองไม่ได้)"
+          ? table3dActive
+            ? "คลิกตัวละครหรือป้ายชื่อบนโต๊ะเพื่อโหวต (โหวตตัวเองไม่ได้)"
+            : "กดที่โปรไฟล์ผู้ต้องสงสัยเพื่อโหวต (โหวตตัวเองไม่ได้)"
           : "รอผลโหวตจากผู้เล่นคนอื่น";
       else if (state.phase === "VOTE_RESULT") sub = "สรุปผลโหวต";
       else if (state.phase === "GUESS")
@@ -534,6 +585,12 @@
       paintYouProfile(state, lastPrivate);
       if (state.phase !== "VOTING") pickedVote = null;
       paintRoster(state);
+      if (table3d && table3dActive) {
+        table3d.paint(state, {
+          players: lastMeta.players,
+          youId: String((opts.youId && opts.youId()) || lastMeta.youId || "")
+        });
+      }
 
       const showPass = (state.maxRounds || 1) > 1;
       $("clues").innerHTML = (state.clues || [])
@@ -655,6 +712,13 @@
       popupOpen = false;
       overlay.classList.add("hidden");
       paintTimers("—", false);
+      if (table3d && typeof table3d.dispose === "function") {
+        try {
+          table3d.dispose();
+        } catch (_) {}
+      }
+      table3d = null;
+      setTableMode(false);
     }
 
     return {

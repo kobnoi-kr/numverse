@@ -460,6 +460,32 @@ body.imposter-play .room-chat-hint {
     transform: none;
   }
 }
+.imp-table3d {
+  display: none;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0b1220;
+}
+.imp-table3d.is-active {
+  display: block;
+}
+.imp-table3d-canvas {
+  width: 100%;
+  line-height: 0;
+}
+.imp-table3d-canvas canvas {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+  cursor: pointer;
+}
+.imp-roster.hidden {
+  display: none !important;
+}
 @media (max-width: 640px) {
   .imp-clue-board li {
     grid-template-columns: 1fr;

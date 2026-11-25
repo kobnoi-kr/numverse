@@ -1,0 +1,504 @@
+/* Imposter Classic — NUMVERSE */
+.imp-root {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 4px 24px;
+}
+.imp-phase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(8, 12, 22, 0.92);
+}
+.imp-phase-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+.imp-timer,
+.imp-pop-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  min-width: 3.4rem;
+  text-align: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.imp-pop-timer {
+  display: inline-block;
+  margin: 0 auto 8px;
+  font-size: 1.45rem;
+}
+.imp-timer.is-urgent,
+.imp-pop-timer.is-urgent {
+  background: #dc2626;
+  color: #fff;
+  border-color: #fecaca;
+  animation: pulseClock 0.7s ease-in-out infinite;
+}
+.imp-clue-board {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(42vh, 360px);
+  overflow: auto;
+}
+.imp-clue-board li {
+  display: grid;
+  grid-template-columns: minmax(72px, 120px) 1fr;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.imp-clue-board .who {
+  font-weight: 600;
+  opacity: 0.85;
+}
+.imp-clue-board .text {
+  font-weight: 700;
+  word-break: break-word;
+}
+.imp-clue-popup {
+  text-align: left;
+}
+.imp-clue-popup.is-imposter .imp-clue-popup-form input {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffe8f0;
+}
+.imp-clue-popup.is-imposter .imp-clue-popup-form input::placeholder {
+  color: rgba(255, 232, 240, 0.55);
+}
+.imp-clue-popup h2 {
+  text-align: center;
+}
+.imp-clue-popup-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+.imp-clue-popup-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #94a3b8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: #f8fafc;
+  color: #0f172a;
+}
+.imp-clue-popup-form input::placeholder {
+  color: #64748b;
+  font-weight: 600;
+}
+.imp-clue-popup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.imp-clue-popup-actions .btn {
+  width: 100%;
+  margin: 0;
+}
+.imp-clue-popup-actions .btn[data-imp-clue="peek"] {
+  grid-column: 1 / -1;
+}
+.imp-clue-popup .imp-clue-side {
+  background: #e2e8f0;
+  color: #0f172a;
+  border: 1px solid #64748b;
+  font-weight: 800;
+}
+.imp-clue-popup .imp-clue-side:hover {
+  background: #cbd5e1;
+}
+.imp-clue-reopen {
+  justify-self: center;
+}
+.over-guess {
+  margin: 0 0 16px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #fecaca;
+}
+.imp-tallies {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.imp-tallies li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+}
+.imp-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.imp-face-card {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(30, 41, 70, 0.95), rgba(12, 18, 36, 0.98));
+  color: inherit;
+  min-height: 118px;
+  cursor: default;
+  padding: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.imp-face-card.is-pickable {
+  cursor: pointer;
+  border-color: rgba(120, 170, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(120, 170, 255, 0.2);
+}
+.imp-face-card.is-pickable:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+.imp-face-card.is-taken {
+  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.04);
+}
+.imp-face-card:disabled {
+  cursor: default;
+}
+.imp-face-inner {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+}
+.imp-you-profile {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 14px;
+}
+.imp-you-profile.is-imposter {
+  background: linear-gradient(160deg, rgba(90, 18, 42, 0.55), rgba(28, 12, 24, 0.72));
+  border-color: rgba(255, 120, 160, 0.35);
+}
+.imp-you-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.imp-you-av {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.4rem;
+}
+.imp-you-av.is-ph {
+  color: rgba(255, 255, 255, 0.65);
+}
+.imp-you-id {
+  min-width: 0;
+  flex: 1;
+}
+.imp-you-kicker {
+  margin: 0 0 2px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.imp-you-id h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-you-id .sub {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+  opacity: 0.75;
+}
+.imp-you-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.imp-you-stat {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.imp-you-stat .label {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  font-weight: 650;
+}
+.imp-you-stat b {
+  font-size: 1.15rem;
+  word-break: break-word;
+}
+.imp-you-stat.is-danger b {
+  color: #ffb3c9;
+}
+.imp-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.imp-seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  min-width: 0;
+}
+.imp-seat.is-you {
+  border-color: rgba(120, 170, 255, 0.45);
+  box-shadow: 0 0 0 1px rgba(120, 170, 255, 0.12);
+}
+.imp-seat.is-turn {
+  border-color: rgba(120, 220, 160, 0.45);
+}
+.imp-seat.is-out {
+  opacity: 0.5;
+}
+.imp-seat.is-voteable {
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.imp-seat.is-voteable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(250, 204, 21, 0.55);
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.2);
+}
+.imp-seat.is-picked {
+  border-color: rgba(250, 204, 21, 0.75);
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.28);
+  background: rgba(250, 204, 21, 0.08);
+}
+.imp-roster.is-voting .imp-seat.is-you {
+  opacity: 0.72;
+}
+.imp-seat-av {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.imp-seat-av.is-ph {
+  color: rgba(255, 255, 255, 0.65);
+}
+.imp-seat-meta {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.imp-seat-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-seat.is-out .imp-seat-name {
+  text-decoration: line-through;
+}
+.imp-seat-badge {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  width: fit-content;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.imp-seat-badge.is-turn {
+  background: rgba(80, 180, 120, 0.22);
+}
+.imp-seat-badge.is-vote {
+  background: rgba(250, 204, 21, 0.18);
+  color: #fde68a;
+}
+.imp-seat-badge.is-picked {
+  background: rgba(250, 204, 21, 0.28);
+  color: #fef3c7;
+}
+.imp-seat-badge.is-imp {
+  background: rgba(180, 40, 80, 0.35);
+  color: #ffd0de;
+}
+.imp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 10, 18, 0.72);
+  backdrop-filter: blur(4px);
+}
+.imp-overlay.is-pop {
+  animation: impFadeIn 0.22s ease;
+}
+.imp-overlay.hidden {
+  display: none !important;
+}
+body.imposter-play .room-chat-dock,
+body.imposter-play .room-chat-toggle,
+body.imposter-play .room-chat-scrim,
+body.imposter-play .room-emoji-panel,
+body.imposter-play .room-chat-hint {
+  z-index: 10060;
+}
+.imp-popup {
+  width: min(420px, 100%);
+  border-radius: 16px;
+  padding: 22px 20px 18px;
+  background: #fff;
+  color: #111;
+  color-scheme: light;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  text-align: center;
+  opacity: 1;
+}
+.imp-popup.is-pop {
+  animation: impPopIn 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.imp-popup h2 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+}
+.imp-popup .imp-word {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin: 12px 0;
+}
+.imp-popup.is-imposter {
+  background: linear-gradient(160deg, #1a1220, #2a1528);
+  color: #ffe8f0;
+  color-scheme: dark;
+}
+.imp-popup.is-imposter .btn {
+  background: #fff;
+  color: #1a1220;
+}
+.imp-hint {
+  opacity: 0.8;
+  font-size: 0.92rem;
+  margin: 0 0 14px;
+}
+@keyframes impFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes impPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.imp-table3d {
+  display: none;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0b1220;
+}
+.imp-table3d.is-active {
+  display: block;
+}
+.imp-table3d-canvas {
+  width: 100%;
+  line-height: 0;
+}
+.imp-table3d-canvas canvas {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+  cursor: pointer;
+}
+.imp-roster.hidden {
+  display: none !important;
+}
+@media (max-width: 640px) {
+  .imp-clue-board li {
+    grid-template-columns: 1fr;
+  }
+  .imp-popup {
+    padding: 18px 14px 14px;
+  }
+  .imp-card-grid {
+    grid-template-columns: 1fr;
+    max-width: 220px;
+    gap: 12px;
+  }
+  .imp-face-card {
+    min-height: 96px;
+  }
+}
