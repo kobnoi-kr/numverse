@@ -2,7 +2,7 @@
 .imp-root {
   display: grid;
   gap: 14px;
-  max-width: 760px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 8px 4px 24px;
 }
@@ -460,58 +460,6 @@ body.imposter-play .room-chat-hint {
     transform: none;
   }
 }
-.imp-table3d {
-  display: none;
-  width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid rgba(167, 139, 250, 0.35);
-  background: radial-gradient(ellipse at 50% 30%, #2a1450 0%, #12081f 70%);
-  box-shadow: 0 0 40px rgba(109, 40, 217, 0.25);
-}
-.imp-table3d.is-active {
-  display: block;
-}
-.imp-table3d-canvas {
-  width: 100%;
-  line-height: 0;
-}
-.imp-table3d-canvas canvas {
-  width: 100% !important;
-  height: auto !important;
-  display: block;
-  cursor: pointer;
-}
-.imp-roster.hidden {
-  display: none !important;
-}
-.imp-you-profile {
-  border-radius: 16px;
-  border: 1px solid rgba(167, 139, 250, 0.35);
-  background: linear-gradient(145deg, rgba(49, 22, 89, 0.95), rgba(15, 10, 30, 0.96));
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-}
-.imp-you-profile.is-imposter {
-  border-color: rgba(248, 113, 113, 0.45);
-  background: linear-gradient(145deg, rgba(88, 20, 40, 0.95), rgba(30, 8, 16, 0.96));
-}
-.imp-you-kicker {
-  color: #c4b5fd;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-.imp-you-profile.is-imposter .imp-you-kicker {
-  color: #fecaca;
-}
-.imp-you-stat b {
-  font-size: 1.15rem;
-}
-.imp-phase {
-  background: rgba(18, 8, 31, 0.92);
-  border: 1px solid rgba(167, 139, 250, 0.22);
-}
 @media (max-width: 640px) {
   .imp-clue-board li {
     grid-template-columns: 1fr;
@@ -526,5 +474,226 @@ body.imposter-play .room-chat-hint {
   }
   .imp-face-card {
     min-height: 96px;
+  }
+}
+
+/* ---------- 3D round table ---------- */
+.imp-table {
+  position: relative;
+  width: 100%;
+  height: clamp(360px, 64vh, 580px);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0b1020;
+  touch-action: manipulation;
+}
+.imp-table.hidden {
+  display: none !important;
+}
+.imp3d-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.imp3d-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 700;
+}
+.imp3d-pins {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.imp3d-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  will-change: transform;
+}
+.imp3d-sign {
+  position: relative;
+  max-width: 150px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #fffbe8;
+  color: #1b1b2f;
+  border: 2px solid #2b2250;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  line-height: 1.25;
+}
+.imp3d-sign::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 12px;
+  height: 12px;
+  background: #fffbe8;
+  border-right: 2px solid #2b2250;
+  border-bottom: 2px solid #2b2250;
+  transform: translateX(-50%) rotate(45deg);
+}
+.imp3d-sign.hidden {
+  display: none;
+}
+.imp3d-sign.is-new {
+  animation: imp3dPop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.imp3d-clue {
+  word-break: break-word;
+}
+.imp3d-clue.is-last {
+  font-weight: 800;
+  font-size: 1rem;
+}
+.imp3d-clue.is-old {
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+.imp3d-clue.is-typing {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  padding: 4px 0;
+}
+.imp3d-clue.is-typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2b2250;
+  animation: imp3dDot 1s ease-in-out infinite;
+}
+.imp3d-clue.is-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.imp3d-clue.is-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.imp3d-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 170px;
+  padding: 3px 10px 3px 3px;
+  border-radius: 999px;
+  background: rgba(8, 12, 22, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 0.8rem;
+}
+.imp3d-chip.is-you {
+  border-color: rgba(120, 170, 255, 0.7);
+}
+.imp3d-chip.is-turn {
+  border-color: rgba(94, 224, 160, 0.8);
+}
+.imp3d-chip.is-out {
+  opacity: 0.55;
+}
+.imp3d-chip.is-out .imp3d-name {
+  text-decoration: line-through;
+}
+.imp3d-chip.is-picked {
+  border-color: #facc15;
+}
+.imp3d-chip.is-imp {
+  border-color: #ff4d7a;
+  background: rgba(90, 18, 42, 0.9);
+}
+.imp3d-chip.is-voteable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.imp3d-av {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.14);
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+.imp3d-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.imp3d-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp3d-badge {
+  font-style: normal;
+  font-size: 0.68rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+.imp3d-badge.hidden {
+  display: none;
+}
+.imp3d-badge.is-turn {
+  background: rgba(80, 180, 120, 0.3);
+}
+.imp3d-badge.is-vote {
+  background: rgba(250, 204, 21, 0.2);
+  color: #fde68a;
+}
+.imp3d-badge.is-picked {
+  background: rgba(250, 204, 21, 0.35);
+  color: #fef3c7;
+}
+.imp3d-badge.is-imp {
+  background: rgba(255, 77, 122, 0.35);
+  color: #ffd0de;
+}
+@keyframes imp3dPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes imp3dDot {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (max-width: 640px) {
+  .imp3d-sign {
+    max-width: 110px;
+    padding: 4px 8px;
+  }
+  .imp3d-chip {
+    max-width: 120px;
+    font-size: 0.7rem;
+  }
+  .imp3d-badge {
+    display: none;
   }
 }
