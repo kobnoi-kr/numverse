@@ -3733,6 +3733,13 @@ setInterval(() => {
 startCleanupScheduler();
 
 try {
+  const { startBackupScheduler } = require("./src/system/backup");
+  startBackupScheduler();
+} catch (err) {
+  console.warn("[backup] scheduler not started:", err && err.message ? err.message : err);
+}
+
+try {
   const { startRankingRewardsScheduler } = require("./src/dashboard/ranking-rewards");
   startRankingRewardsScheduler();
 } catch (err) {

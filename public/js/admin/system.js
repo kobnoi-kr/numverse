@@ -44,6 +44,12 @@ export async function renderSystem(root, { user }) {
       <p class="tiny" id="sysCleanMsg">ตั้งค่าละเอียดได้ที่เมนู Settings</p>
     </div>
     <div class="card" style="margin-top:16px">
+      <h2>Auto Backup</h2>
+      <p class="muted" id="sysBackupStats">กำลังโหลด…</p>
+      <button type="button" class="btn sm" id="sysBackupRun">Backup ตอนนี้</button>
+      <p class="tiny" id="sysBackupMsg">เก็บไว้บนเครื่องนี้ · รันอัตโนมัติเมื่อครบกำหนด และมี Task รายวันตอน 04:00</p>
+    </div>
+    <div class="card" style="margin-top:16px">
       <h2>Danger zone</h2>
       <p class="muted">ลบ session ที่หมดอายุหรือถูก revoke แล้ว</p>
       <button type="button" class="btn danger sm" id="sysClear" ${isSuper ? "" : "disabled"}>Clear expired sessions</button>
@@ -66,6 +72,38 @@ export async function renderSystem(root, { user }) {
       ` · activity ${r.data.activityTotal || 0} (หมดอายุ ${r.data.activityExpired || 0}) · ${lastText}`;
   }
   loadCleanStats();
+
+  const backupStats = root.querySelector("#sysBackupStats");
+  const backupMsg = root.querySelector("#sysBackupMsg");
+  const backupRun = root.querySelector("#sysBackupRun");
+  async function loadBackupStats() {
+    const r = await api("/api/v1/admin/system/backup", { method: "GET" });
+    if (!r.res.ok || !backupStats) return;
+    const last = r.data.last;
+    const lastText = last
+      ? `ล่าสุด ${new Date(last.createdAt).toLocaleString("th-TH")} · db ${last.dumpPretty} · uploads ${last.uploadsPretty}`
+      : "ยังไม่เคย backup";
+    backupStats.textContent =
+      `${r.data.count || 0} ชุด · เก็บ ${r.data.keep} ชุดล่าสุด · ทุก ${r.data.intervalHours} ชม. · ${lastText}` +
+      (r.data.running ? " · กำลัง backup" : "");
+  }
+  loadBackupStats();
+  if (backupRun) {
+    backupRun.onclick = async () => {
+      if (!(await confirmDialog("Backup ฐานข้อมูลและไฟล์อัปโหลดตอนนี้?"))) return;
+      backupRun.disabled = true;
+      if (backupMsg) backupMsg.textContent = "กำลัง backup…";
+      const r = await api("/api/v1/admin/system/backup", { method: "POST", body: "{}" });
+      backupRun.disabled = false;
+      if (!r.res.ok) {
+        if (backupMsg) backupMsg.textContent = (r.data && r.data.message) || "backup ไม่สำเร็จ";
+        return;
+      }
+      if (backupMsg) backupMsg.textContent = `เสร็จแล้ว · ${r.data.id} · db ${r.data.dumpPretty}`;
+      loadBackupStats();
+    };
+  }
+
   if (cleanRun) {
     cleanRun.onclick = async () => {
       if (!(await confirmDialog("รัน cleanup ตอนนี้?"))) return;

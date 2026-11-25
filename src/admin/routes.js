@@ -1284,6 +1284,43 @@ async function handleAdminApi(req, res, pathname) {
     return true;
   }
 
+  if (pathname === "/api/v1/admin/system/backup") {
+    const { backupStatus, runBackup, safeError } = require("../system/backup");
+    if (method(req) === "GET") {
+      const auth = await requirePermission(req, res, "settings.view");
+      if (!auth) return true;
+      sendJson(res, 200, backupStatus());
+      return true;
+    }
+    if (method(req) === "POST") {
+      const auth = await requirePermission(req, res, "settings.manage");
+      if (!auth) return true;
+      try {
+        const result = await runBackup({ reason: "admin" });
+        if (result && result.skipped) {
+          sendJson(res, 409, { error: "backup_in_progress" });
+          return true;
+        }
+        await writeAdminLog(prisma, {
+          adminId: auth.user.id,
+          action: "system.backup",
+          metadata: {
+            id: result.id,
+            dumpBytes: result.dumpBytes,
+            uploadsBytes: result.uploadsBytes
+          },
+          ipAddress: ip
+        });
+        sendJson(res, 200, result);
+      } catch (err) {
+        sendJson(res, 500, { error: "backup_failed", message: safeError(err) });
+      }
+      return true;
+    }
+    sendJson(res, 405, { error: "method_not_allowed" });
+    return true;
+  }
+
   // —— Shop pts grant (test / support) ——
   if (pathname === "/api/v1/admin/shop-pts/grant" && method(req) === "POST") {
     const gate = await requireAdmin(req, res);

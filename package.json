@@ -7,6 +7,9 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
+    "backup": "node scripts/backup.js",
+    "backup:status": "node scripts/backup.js --status",
+    "backup:install": "node scripts/backup.js --install-task",
     "postinstall": "prisma generate || true"
   },
   "dependencies": {

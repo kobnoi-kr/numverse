@@ -252,4 +252,4 @@ async function ensureAppDatabase(cfg) {
   }
 }
 
-module.exports = { startEmbeddedPostgres, connectionUrl, settings };
+module.exports = { startEmbeddedPostgres, connectionUrl, settings, nativeBinDir };
