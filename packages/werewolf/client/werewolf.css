@@ -1,5 +1,5 @@
 body.werewolf-play .stage {
-  max-width: min(100vw - 16px, 920px);
+  max-width: min(100vw - 16px, 980px);
 }
 
 .ww-lobby-roles {
@@ -26,12 +26,12 @@ body.werewolf-play .stage {
 .ww-root {
   --ww-ink: #eef0ff;
   --ww-muted: #a5a9d6;
-  --ww-panel: rgba(14, 16, 48, 0.72);
+  --ww-panel: rgba(14, 16, 48, 0.78);
   --ww-line: rgba(165, 169, 214, 0.28);
   --ww-accent: #7c6cff;
   --ww-moon: #ffd98a;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   color: var(--ww-ink);
   font-family: "Kanit", "Noto Sans Thai", system-ui, sans-serif;
 }
@@ -42,12 +42,36 @@ body.werewolf-play .stage {
   overflow: hidden;
   border: 1px solid var(--ww-line);
   background: #0d1030;
+  min-height: clamp(380px, 68vh, 640px);
+}
+
+.ww-stage-wrap:fullscreen,
+.ww-stage-wrap:-webkit-full-screen,
+.ww-stage-wrap.is-fs-fallback {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  border-radius: 0;
+  border: 0;
+  min-height: 100vh;
+  z-index: 9999;
+}
+
+.ww-stage-wrap.is-fs-fallback {
+  position: fixed;
+  inset: 0;
 }
 
 .ww-village {
   width: 100%;
-  height: clamp(360px, 64vh, 580px);
+  height: clamp(380px, 68vh, 640px);
   touch-action: none;
+}
+
+.ww-stage-wrap:fullscreen .ww-village,
+.ww-stage-wrap:-webkit-full-screen .ww-village,
+.ww-stage-wrap.is-fs-fallback .ww-village {
+  height: 100%;
 }
 
 .ww-village.hidden {
@@ -75,13 +99,141 @@ body.werewolf-play .stage {
   left: 12px;
   right: 12px;
   top: 12px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
   pointer-events: none;
-  z-index: 2;
 }
 
-.ww-hud .ww-phase,
+.ww-hud .ww-phase {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--ww-panel);
+  border: 1px solid var(--ww-line);
+  backdrop-filter: blur(10px);
+}
+
 .ww-hud .sub {
+  width: 100%;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(14, 16, 48, 0.55);
+  border: 1px solid var(--ww-line);
+  color: var(--ww-muted);
+  font-size: 0.9rem;
+}
+
+.ww-fs-btn {
+  pointer-events: auto;
+  margin-left: auto;
+  font: 600 0.85rem "Kanit", system-ui, sans-serif;
+  color: var(--ww-ink);
+  background: var(--ww-panel);
+  border: 1px solid var(--ww-line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.ww-fs-btn:hover {
+  background: rgba(124, 108, 255, 0.35);
+}
+
+.ww-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
   pointer-events: none;
+  width: min(520px, calc(100% - 24px));
+  transform: translateX(-50%);
+}
+
+.ww-dock > * {
+  pointer-events: auto;
+}
+
+.ww-you-card {
+  display: grid;
+  justify-items: start;
+}
+
+.ww-role-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 220px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--ww-role) 65%, white 10%);
+  background: var(--ww-panel);
+  color: var(--ww-ink);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.ww-chip-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #0b1220;
+  display: block;
+}
+
+.ww-chip-meta {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ww-chip-meta b {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.ww-chip-meta span {
+  color: var(--ww-muted);
+  font-size: 0.78rem;
+}
+
+.ww-chip-note {
+  color: var(--ww-moon) !important;
+  font-weight: 600;
+}
+
+.ww-role-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(8, 9, 30, 0.82);
+  backdrop-filter: blur(6px);
+  overflow: auto;
+}
+
+.ww-role-modal.hidden {
+  display: none;
+}
+
+.ww-role-close {
+  margin-top: 4px;
 }
 
 .ww-witch-actions .btn.on,
@@ -91,27 +243,16 @@ body.werewolf-play .stage {
   border-color: transparent;
 }
 
-.ww-root.ww-night {
-  background:
-    radial-gradient(ellipse at top, rgba(88, 28, 135, 0.28), transparent 55%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.35), transparent 40%);
-  border-radius: 18px;
-  padding: 12px;
-}
-
-.ww-root.ww-day {
-  background:
-    radial-gradient(ellipse at top, rgba(251, 191, 36, 0.16), transparent 50%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.2), transparent 40%);
-  border-radius: 18px;
-  padding: 12px;
+.ww-root.ww-night .ww-stage-wrap,
+.ww-root.ww-day .ww-stage-wrap {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .ww-phase {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
+  gap: 8px 12px;
 }
 
 .ww-phase-badge {
@@ -131,7 +272,8 @@ body.werewolf-play .stage {
 .ww-phase-title {
   margin: 0;
   flex: 1;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 
 .ww-timer {
@@ -141,13 +283,9 @@ body.werewolf-play .stage {
   text-align: right;
 }
 
-.ww-you-card {
-  display: grid;
-}
-
 .ww-role-card {
   display: grid;
-  grid-template-columns: minmax(140px, 220px) 1fr;
+  grid-template-columns: minmax(120px, 180px) 1fr;
   gap: 14px;
   align-items: center;
   padding: 12px;
@@ -155,6 +293,7 @@ body.werewolf-play .stage {
   border: 2px solid color-mix(in srgb, var(--ww-role) 70%, white 10%);
   background: var(--ww-panel);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 12px 30px rgba(0, 0, 0, 0.28);
+  max-width: min(460px, 100%);
 }
 
 .ww-role-art {
@@ -167,7 +306,7 @@ body.werewolf-play .stage {
 
 .ww-role-meta h3 {
   margin: 4px 0 8px;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
 .ww-role-team {
@@ -191,10 +330,17 @@ body.werewolf-play .stage {
 }
 
 .ww-action {
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--ww-line);
-  background: rgba(2, 6, 23, 0.45);
+  background: var(--ww-panel);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.ww-action .label,
+.ww-action .hint {
+  margin: 0;
 }
 
 .ww-targets,
@@ -244,22 +390,24 @@ body.werewolf-play .stage {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 6px;
-  max-height: 160px;
-  overflow: auto;
+  gap: 4px;
+  max-width: 260px;
 }
 
 .ww-log-item {
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(14, 16, 48, 0.72);
   border: 1px solid var(--ww-line);
-  font-size: 0.92rem;
+  font-size: 0.8rem;
+  color: var(--ww-muted);
+  backdrop-filter: blur(8px);
 }
 
 .ww-log-death,
 .ww-log-hunter {
   border-color: rgba(248, 113, 113, 0.45);
+  color: #fecaca;
 }
 
 .ww-log-night {
@@ -270,18 +418,43 @@ body.werewolf-play .stage {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .ww-tallies li {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.55);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(14, 16, 48, 0.72);
+  border: 1px solid var(--ww-line);
+  font-size: 0.82rem;
+  backdrop-filter: blur(8px);
 }
 
 @media (max-width: 640px) {
   .ww-role-card {
     grid-template-columns: 1fr;
+  }
+
+  .ww-hud {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+  }
+
+  .ww-dock {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .ww-fs-btn {
+    padding: 7px 11px;
+    font-size: 0.8rem;
+  }
+
+  .ww-phase-title {
+    font-size: 0.95rem;
   }
 }

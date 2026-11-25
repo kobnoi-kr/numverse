@@ -44,7 +44,7 @@
 
     root.innerHTML = `
       <div class="ww-root">
-        <div class="ww-stage-wrap">
+        <div class="ww-stage-wrap" data-ww="stage">
           <div class="ww-village hidden" data-ww="village3d" aria-label="หมู่บ้านหมาป่า 3D"></div>
           <div class="ww-hud">
             <div class="ww-phase">
@@ -53,28 +53,80 @@
               <div class="ww-timer" data-ww="timer">—</div>
             </div>
             <p class="sub" data-ww="sub"></p>
+            <button type="button" class="ww-fs-btn" data-ww="fsBtn" title="ขยายเพื่อเล่นเต็มจอ" aria-label="ขยายเพื่อเล่นเต็มจอ">⛶ เต็มจอ</button>
           </div>
+          <div class="ww-dock">
+            <div class="ww-you-card hidden" data-ww="youCard"></div>
+            <div class="ww-action hidden" data-ww="action"></div>
+            <ul class="ww-log" data-ww="log"></ul>
+            <ul class="ww-tallies hidden" data-ww="tallies"></ul>
+          </div>
+          <div class="ww-role-modal hidden" data-ww="roleModal" role="dialog" aria-modal="true"></div>
         </div>
-        <div class="ww-you-card hidden" data-ww="youCard"></div>
-        <div class="ww-action hidden" data-ww="action"></div>
         <div class="ww-roster" data-ww="roster" role="list"></div>
-        <ul class="ww-log" data-ww="log"></ul>
-        <ul class="ww-tallies hidden" data-ww="tallies"></ul>
       </div>
     `;
 
     const el = {
+      stage: root.querySelector('[data-ww="stage"]'),
       village3d: root.querySelector('[data-ww="village3d"]'),
       phaseBadge: root.querySelector('[data-ww="phaseBadge"]'),
       phaseTitle: root.querySelector('[data-ww="phaseTitle"]'),
       timer: root.querySelector('[data-ww="timer"]'),
       sub: root.querySelector('[data-ww="sub"]'),
+      fsBtn: root.querySelector('[data-ww="fsBtn"]'),
       youCard: root.querySelector('[data-ww="youCard"]'),
       action: root.querySelector('[data-ww="action"]'),
+      roleModal: root.querySelector('[data-ww="roleModal"]'),
       roster: root.querySelector('[data-ww="roster"]'),
       log: root.querySelector('[data-ww="log"]'),
       tallies: root.querySelector('[data-ww="tallies"]')
     };
+
+    let roleExpanded = false;
+
+    function isNativeFs() {
+      return document.fullscreenElement === el.stage || document.webkitFullscreenElement === el.stage;
+    }
+
+    function isFs() {
+      return isNativeFs() || el.stage.classList.contains("is-fs-fallback");
+    }
+
+    function syncFsBtn() {
+      const on = isFs();
+      el.fsBtn.textContent = on ? "✕ ออกจากเต็มจอ" : "⛶ เต็มจอ";
+      el.fsBtn.title = on ? "ออกจากโหมดเต็มจอ" : "ขยายเพื่อเล่นเต็มจอ";
+      el.fsBtn.setAttribute("aria-label", el.fsBtn.title);
+      el.stage.classList.toggle("is-fs", on);
+    }
+
+    function toggleFullscreen() {
+      if (el.stage.classList.contains("is-fs-fallback")) {
+        el.stage.classList.remove("is-fs-fallback");
+        syncFsBtn();
+        return;
+      }
+      if (isNativeFs()) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
+        return;
+      }
+      const req = el.stage.requestFullscreen || el.stage.webkitRequestFullscreen;
+      if (req) {
+        Promise.resolve(req.call(el.stage)).catch(function () {
+          el.stage.classList.add("is-fs-fallback");
+          syncFsBtn();
+        });
+      } else {
+        el.stage.classList.add("is-fs-fallback");
+        syncFsBtn();
+      }
+    }
+
+    el.fsBtn.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", syncFsBtn);
+    document.addEventListener("webkitfullscreenchange", syncFsBtn);
 
     function alivePlayers() {
       const pub = lastPublic;
@@ -148,14 +200,7 @@
       v.update(lastPublic, { pickedId: pickedId });
     }
 
-    function paintYouCard() {
-      const priv = lastPrivate;
-      if (!priv || !priv.role) {
-        el.youCard.classList.add("hidden");
-        el.youCard.innerHTML = "";
-        return;
-      }
-      el.youCard.classList.remove("hidden");
+    function roleDetailHtml(priv) {
       const peers =
         priv.peers && priv.peers.length
           ? `<p class="ww-peers">หมาป่าด้วยกัน: ${priv.peers
@@ -168,7 +213,7 @@
               priv.inspectResult.isWerewolf ? "ฝ่ายหมาป่า" : "ไม่ใช่หมาป่า"
             }</p>`
           : "";
-      el.youCard.innerHTML = `
+      return `
         <article class="ww-role-card" style="--ww-role:${esc(priv.color || "#64748b")}">
           <img class="ww-role-art" src="${esc(priv.image)}" alt="${esc(priv.nameEn)}" width="420" height="420" decoding="async">
           <div class="ww-role-meta">
@@ -179,6 +224,78 @@
           </div>
         </article>
       `;
+    }
+
+    function paintRoleModal() {
+      const priv = lastPrivate;
+      if (!roleExpanded || !priv || !priv.role) {
+        el.roleModal.classList.add("hidden");
+        el.roleModal.innerHTML = "";
+        return;
+      }
+      const canConfirm = lastPublic && lastPublic.phase === "ROLE_REVEAL" && lastPublic.canConfirm;
+      el.roleModal.classList.remove("hidden");
+      el.roleModal.innerHTML =
+        roleDetailHtml(priv) +
+        (canConfirm
+          ? `<button type="button" class="btn ww-role-close" data-ww="roleConfirm">ยืนยันบทบาท</button>`
+          : `<button type="button" class="btn ww-role-close" data-ww="roleClose">ปิด</button>`);
+      const confirmBtn = el.roleModal.querySelector('[data-ww="roleConfirm"]');
+      if (confirmBtn) {
+        confirmBtn.onclick = () => {
+          roleExpanded = false;
+          paintRoleModal();
+          send({ t: "ww:confirm" });
+        };
+      }
+      const closeBtn = el.roleModal.querySelector('[data-ww="roleClose"]');
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          roleExpanded = false;
+          paintRoleModal();
+        };
+      }
+      el.roleModal.onclick = (e) => {
+        if (e.target === el.roleModal && !canConfirm) {
+          roleExpanded = false;
+          paintRoleModal();
+        }
+      };
+    }
+
+    function paintYouCard() {
+      const priv = lastPrivate;
+      if (!priv || !priv.role) {
+        el.youCard.classList.add("hidden");
+        el.youCard.innerHTML = "";
+        roleExpanded = false;
+        paintRoleModal();
+        return;
+      }
+      el.youCard.classList.remove("hidden");
+      const note =
+        priv.inspectResult
+          ? `<span class="ww-chip-note">${esc(priv.inspectResult.name)} ${
+              priv.inspectResult.isWerewolf ? "หมาป่า" : "ไม่ใช่หมาป่า"
+            }</span>`
+          : !priv.alive
+            ? `<span class="ww-chip-note">ตายแล้ว</span>`
+            : "";
+      el.youCard.innerHTML = `
+        <button type="button" class="ww-role-chip" style="--ww-role:${esc(priv.color || "#64748b")}" data-ww="roleChip" title="ดูบทบาทของคุณ">
+          <img class="ww-chip-art" src="${esc(priv.image)}" alt="" width="48" height="48" decoding="async">
+          <span class="ww-chip-meta">
+            <b>${esc(priv.nameTh)}</b>
+            <span>${priv.team === "werewolf" ? "ฝ่ายหมาป่า" : "ฝ่ายหมู่บ้าน"}</span>
+            ${note}
+          </span>
+        </button>
+      `;
+      el.youCard.querySelector('[data-ww="roleChip"]').onclick = () => {
+        roleExpanded = !roleExpanded;
+        paintRoleModal();
+      };
+      paintRoleModal();
     }
 
     function paintRoster() {
@@ -216,7 +333,7 @@
     function paintLog() {
       const rows = (lastPublic && lastPublic.log) || [];
       el.log.innerHTML = rows
-        .slice()
+        .slice(-4)
         .reverse()
         .map((row) => `<li class="ww-log-item ww-log-${esc(row.kind || "info")}">${esc(row.text)}</li>`)
         .join("");
@@ -264,9 +381,15 @@
       const tap = use3dPick();
 
       if (pub.phase === "ROLE_REVEAL" && pub.canConfirm) {
+        roleExpanded = true;
+        paintRoleModal();
         el.action.classList.remove("hidden");
-        el.action.innerHTML = `<button type="button" class="btn" data-ww-act="confirm">ยืนยันบทบาท</button>`;
-        el.action.querySelector('[data-ww-act="confirm"]').onclick = () => send({ t: "ww:confirm" });
+        el.action.innerHTML = `<p class="label">ดูบทบาทของคุณแล้วกดยืนยัน</p><button type="button" class="btn" data-ww-act="confirm">ยืนยันบทบาท</button>`;
+        el.action.querySelector('[data-ww-act="confirm"]').onclick = () => {
+          roleExpanded = false;
+          paintRoleModal();
+          send({ t: "ww:confirm" });
+        };
         return;
       }
 
@@ -464,6 +587,13 @@
       paint,
       halt() {
         clearInterval(timer);
+        document.removeEventListener("fullscreenchange", syncFsBtn);
+        document.removeEventListener("webkitfullscreenchange", syncFsBtn);
+        if (isFs()) {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit) exit.call(document);
+        }
+        el.stage.classList.remove("is-fs-fallback");
         if (village3d) {
           village3d.destroy();
           village3d = null;
