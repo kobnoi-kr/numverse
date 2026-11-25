@@ -8,8 +8,8 @@ const DAY_SEC = 24 * 60 * 60;
 
 const DEFAULTS = {
   guest_cleanup_enabled: true,
-  guest_idle_days: 7,
-  guest_session_days: 7,
+  guest_idle_days: 1,
+  guest_session_days: 1,
   session_cleanup_enabled: true,
   cleanup_interval_minutes: 60,
   guest_create_per_ip_hour: 40,
@@ -332,6 +332,19 @@ async function ensureCleanupDefaults(prisma) {
             where: { key },
             update: { value: 30 },
             create: { key, value: 30 }
+          });
+          continue;
+        }
+      }
+      // Bump legacy 7-day guest TTL → 24h (1 day).
+      if (key === "guest_idle_days" || key === "guest_session_days") {
+        const existing = await prisma.systemSetting.findUnique({ where: { key } });
+        const cur = existing ? Number(existing.value) : NaN;
+        if (!existing || cur === 7) {
+          await prisma.systemSetting.upsert({
+            where: { key },
+            update: { value: 1 },
+            create: { key, value: 1 }
           });
           continue;
         }

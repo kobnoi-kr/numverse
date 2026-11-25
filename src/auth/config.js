@@ -4,7 +4,7 @@ const DAY = 24 * 60 * 60;
 const HOUR = 60 * 60;
 
 const SESSION_TTL = {
-  guest: Number(process.env.SESSION_TTL_GUEST_SEC) || 7 * DAY,
+  guest: Number(process.env.SESSION_TTL_GUEST_SEC) || 1 * DAY,
   registered: Number(process.env.SESSION_TTL_REGISTERED_SEC) || 30 * DAY,
   admin: Number(process.env.SESSION_TTL_ADMIN_SEC) || 8 * HOUR
 };

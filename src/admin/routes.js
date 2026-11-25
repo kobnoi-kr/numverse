@@ -1413,8 +1413,8 @@ async function handleAdminApi(req, res, pathname) {
           ) {
             value = !!value;
           }
-          if (key === "guest_idle_days") value = Math.min(365, Math.max(1, Number(value) || 7));
-          if (key === "guest_session_days") value = Math.min(90, Math.max(1, Number(value) || 7));
+          if (key === "guest_idle_days") value = Math.min(365, Math.max(1, Number(value) || 1));
+          if (key === "guest_session_days") value = Math.min(90, Math.max(1, Number(value) || 1));
           if (key === "cleanup_interval_minutes") {
             value = Math.min(24 * 60, Math.max(5, Number(value) || 60));
           }

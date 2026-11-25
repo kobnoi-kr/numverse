@@ -115,10 +115,10 @@ export async function renderSettings(root, { user }) {
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px">
           <label class="tiny">Guest idle (วัน)
-            <input class="input" id="sGuestIdle" type="number" min="1" max="365" value="${Number(s.guest_idle_days) || 7}" ${canManage ? "" : "disabled"}/>
+            <input class="input" id="sGuestIdle" type="number" min="1" max="365" value="${Number(s.guest_idle_days) || 1}" ${canManage ? "" : "disabled"}/>
           </label>
           <label class="tiny">อายุ session guest (วัน)
-            <input class="input" id="sGuestSess" type="number" min="1" max="90" value="${Number(s.guest_session_days) || 7}" ${canManage ? "" : "disabled"}/>
+            <input class="input" id="sGuestSess" type="number" min="1" max="90" value="${Number(s.guest_session_days) || 1}" ${canManage ? "" : "disabled"}/>
           </label>
           <label class="tiny">รอบ cleanup (นาที)
             <input class="input" id="sCleanEvery" type="number" min="5" max="1440" value="${Number(s.cleanup_interval_minutes) || 60}" ${canManage ? "" : "disabled"}/>
@@ -293,8 +293,8 @@ export async function renderSettings(root, { user }) {
           {
             guest_cleanup_enabled: !!root.querySelector("#sGuestClean").checked,
             session_cleanup_enabled: !!root.querySelector("#sSessClean").checked,
-            guest_idle_days: Number(root.querySelector("#sGuestIdle").value) || 7,
-            guest_session_days: Number(root.querySelector("#sGuestSess").value) || 7,
+            guest_idle_days: Number(root.querySelector("#sGuestIdle").value) || 1,
+            guest_session_days: Number(root.querySelector("#sGuestSess").value) || 1,
             cleanup_interval_minutes: Number(root.querySelector("#sCleanEvery").value) || 60,
             guest_create_per_ip_hour: Number(root.querySelector("#sGuestRate").value) || 0,
             game_history_retention_days: Number(root.querySelector("#sGameHistDays").value) || 30
